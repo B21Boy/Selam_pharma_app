@@ -36,7 +36,7 @@ class MyApp extends StatelessWidget {
         builder: (context, themeProvider, child) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
-            title: 'Pharmacy Manager',
+            title: 'SHMed',
             theme: ThemeData(
               primaryColor: Color(0xFF007BFF), // Medical blue
               colorScheme: ColorScheme.light(

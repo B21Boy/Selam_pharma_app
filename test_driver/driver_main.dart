@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_driver/driver_extension.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 //
-import 'package:pharmacy_app/main.dart' as app;
-import 'package:pharmacy_app/models/medicine.dart';
-import 'package:pharmacy_app/models/report.dart';
+import 'package:shmed/main.dart' as app;
+import 'package:shmed/models/medicine.dart';
+import 'package:shmed/models/report.dart';
 
 void main() async {
   enableFlutterDriverExtension();

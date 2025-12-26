@@ -1,4 +1,4 @@
-# pharmacy_app
+# SHMed
 
 A new Flutter project.
 

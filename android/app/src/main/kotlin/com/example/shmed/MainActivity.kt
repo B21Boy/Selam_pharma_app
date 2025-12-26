@@ -1,4 +1,4 @@
-package com.example.pharmacy_app
+package com.example.shmed
 
 import io.flutter.embedding.android.FlutterActivity
 

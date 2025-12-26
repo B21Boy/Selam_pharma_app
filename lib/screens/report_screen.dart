@@ -29,6 +29,19 @@ class ReportScreenState extends State<ReportScreen> {
     _searchController.addListener(() => setState(() {}));
   }
 
+  Future<void> _pickDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (picked != null) {
+      final formattedDate = DateFormat('yyyy-MM-dd').format(picked);
+      _searchController.text = formattedDate;
+    }
+  }
+
   List<Report> _filterReportsByPeriod(List<Report> reports, String period) {
     final now = DateTime.now();
     DateTime startDate;
@@ -81,15 +94,40 @@ class ReportScreenState extends State<ReportScreen> {
   @override
   Widget build(BuildContext context) {
     final reports = context.watch<PharmacyProvider>().reports;
-    final query = _searchController.text.toLowerCase();
-    final periodFilteredReports = _filterReportsByPeriod(
-      reports,
-      _timePeriods[_selectedPeriodIndex],
-    );
-    final filteredReports = periodFilteredReports.where((report) {
-      final matchesSearch =
-          query.isEmpty || report.medicineName.toLowerCase().contains(query);
-      return matchesSearch;
+    final query = _searchController.text.trim();
+    List<Report> baseReports;
+    final dateMatch = RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(query);
+    bool isDateFilter = false;
+    if (dateMatch && query.isNotEmpty) {
+      try {
+        final inputDate = DateTime.parse(query);
+        baseReports = reports.where((report) {
+          final reportDate = DateTime(
+            report.dateTime.year,
+            report.dateTime.month,
+            report.dateTime.day,
+          );
+          return reportDate.isAtSameMomentAs(
+            DateTime(inputDate.year, inputDate.month, inputDate.day),
+          );
+        }).toList();
+        isDateFilter = true;
+      } catch (e) {
+        baseReports = _filterReportsByPeriod(
+          reports,
+          _timePeriods[_selectedPeriodIndex],
+        );
+      }
+    } else {
+      baseReports = _filterReportsByPeriod(
+        reports,
+        _timePeriods[_selectedPeriodIndex],
+      );
+    }
+
+    final filteredReports = baseReports.where((report) {
+      if (isDateFilter || query.isEmpty) return true;
+      return report.medicineName.toLowerCase().contains(query.toLowerCase());
     }).toList();
 
     // Group reports by date
@@ -173,7 +211,7 @@ class ReportScreenState extends State<ReportScreen> {
               children: [
                 Expanded(
                   child: _buildSummaryCard(
-                    _timePeriods[_selectedPeriodIndex],
+                    isDateFilter ? query : _timePeriods[_selectedPeriodIndex],
                     '${filteredReports.length} Reports',
                     Icons.calendar_today,
                     Colors.orange,
@@ -188,8 +226,12 @@ class ReportScreenState extends State<ReportScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search medicines...',
+                hintText: 'Search medicines or select date',
                 prefixIcon: Icon(Icons.search),
+                suffixIcon: IconButton(
+                  icon: Icon(Icons.calendar_today),
+                  onPressed: () => _pickDate(context),
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -499,15 +541,25 @@ class ReportScreenState extends State<ReportScreen> {
       // Update the medicine (this will also update all reports with the new name)
       await provider.updateMedicine(medicineToUpdate);
 
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Medicine renamed successfully')));
+      // Use microtask to avoid async gap lint warning
+      Future.microtask(() {
+        if (context.mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Medicine renamed successfully')),
+          );
+        }
+      });
     } else {
-      Navigator.of(context).pop();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Medicine not found')));
+      // Use microtask to avoid async gap lint warning
+      Future.microtask(() {
+        if (context.mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Medicine not found')));
+        }
+      });
     }
   }
 }
