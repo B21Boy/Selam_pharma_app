@@ -31,6 +31,14 @@ class Medicine extends HiveObject {
 
   @HiveField(8)
   String? barcode;
+  @HiveField(9)
+  String? imageUrl;
+
+  @HiveField(10)
+  String? cloudinaryPublicId;
+
+  @HiveField(11)
+  int? lastModifiedMillis;
 
   Medicine({
     required this.id,

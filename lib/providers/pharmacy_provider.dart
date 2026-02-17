@@ -1,11 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/medicine.dart';
 import '../models/report.dart';
+import '../services/ai_service.dart';
 
 class PharmacyProvider extends ChangeNotifier {
-  late Box<Medicine> _medicineBox;
-  late Box<Report> _reportBox;
+  Box<Medicine>? _medicineBox;
+  Box<Report>? _reportBox;
+  StreamSubscription<User?>? _authSub;
 
   List<Medicine> _medicines = [];
   List<Report> _reports = [];
@@ -14,21 +19,24 @@ class PharmacyProvider extends ChangeNotifier {
   List<Medicine> get medicines => _medicines;
   List<Report> get reports => _reports;
 
+  /// Initialize boxes and listen for auth changes to open per-user boxes.
   Future<void> initBoxes() async {
-    _medicineBox = await Hive.openBox<Medicine>('medicines');
-    _reportBox = await Hive.openBox<Report>('reports');
-    await loadData();
+    _authSub = FirebaseAuth.instance.authStateChanges().listen((user) async {
+      await _openBoxesForUid(user?.uid);
+    });
+
+    await _openBoxesForUid(FirebaseAuth.instance.currentUser?.uid);
     _initialized = true;
   }
 
   Future<void> loadData() async {
-    _medicines = _medicineBox.values.toList();
-    _reports = _reportBox.values.toList();
+    _medicines = _medicineBox?.values.toList() ?? [];
+    _reports = _reportBox?.values.toList() ?? [];
     notifyListeners();
   }
 
   Future<void> addMedicine(Medicine medicine) async {
-    await _medicineBox.put(medicine.id, medicine);
+    await _medicineBox?.put(medicine.id, medicine);
     await loadData();
   }
 
@@ -55,7 +63,6 @@ class PharmacyProvider extends ChangeNotifier {
     for (final report in reportsToDelete) {
       await report.delete();
     }
-
     await medicine.delete();
     await loadData();
   }
@@ -64,7 +71,7 @@ class PharmacyProvider extends ChangeNotifier {
     if (!_initialized) {
       await initBoxes();
     }
-    await _reportBox.add(report);
+    await _reportBox?.add(report);
     await loadData();
   }
 
@@ -81,6 +88,37 @@ class PharmacyProvider extends ChangeNotifier {
   Future<void> removeReport(Report report) async {
     await report.delete();
     await loadData();
+  }
+
+  Future<void> _openBoxesForUid(String? uid) async {
+    final medsName = uid == null ? 'medicines_guest' : 'medicines_$uid';
+    final reportsName = uid == null ? 'reports_guest' : 'reports_$uid';
+
+    try {
+      // close existing boxes if different
+      if (_medicineBox != null && _medicineBox!.isOpen) {
+        await _medicineBox!.close();
+      }
+      if (_reportBox != null && _reportBox!.isOpen) {
+        await _reportBox!.close();
+      }
+    } catch (e) {
+      debugPrint('PharmacyProvider: error closing boxes: $e');
+    }
+
+    _medicineBox = await Hive.openBox<Medicine>(medsName);
+    _reportBox = await Hive.openBox<Report>(reportsName);
+    await loadData();
+  }
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    try {
+      _medicineBox?.close();
+      _reportBox?.close();
+    } catch (_) {}
+    super.dispose();
   }
 
   List<Medicine> getOutOfStockMedicines() {
@@ -108,5 +146,49 @@ class PharmacyProvider extends ChangeNotifier {
     } catch (e) {
       return null;
     }
+  }
+
+  /// Build a safe prompt and get AI recommendation, validating results.
+  Future<String> recommendFromSymptoms(String symptoms) async {
+    if (!_initialized) await initBoxes();
+
+    // Build a constrained prompt listing available medicines and safety rules.
+    final medicineList = _medicines.map((m) => m.name).toList();
+    final buffer = StringBuffer();
+    buffer.writeln('You are a pharmacy assistant.');
+    buffer.writeln('Available medicines: ${medicineList.join(", ")}');
+    buffer.writeln('Rules:');
+    buffer.writeln('- Recommend only from the Available medicines list.');
+    buffer.writeln('- Do not diagnose conditions.');
+    buffer.writeln('- Do not give child dosages.');
+    buffer.writeln(
+      '- If symptoms are severe (chest pain, difficulty breathing, fainting), advise to seek emergency care.',
+    );
+    buffer.writeln('User symptoms: $symptoms');
+
+    final ai = AIService();
+    final resp = await ai.getAIRecommendation(buffer.toString());
+
+    final lower = resp.toLowerCase();
+    // If AI advises seeing a doctor / emergency, allow that through.
+    if (lower.contains('doctor') ||
+        lower.contains('emergency') ||
+        lower.contains('seek medical') ||
+        lower.contains('call 911') ||
+        lower.contains('urgent')) {
+      return resp;
+    }
+
+    // Validate that at least one recommended medicine exists in Hive.
+    final knownNames = _medicines.map((m) => m.name.toLowerCase()).toList();
+    final mentionedKnown = knownNames
+        .where((name) => lower.contains(name))
+        .toList();
+
+    if (mentionedKnown.isEmpty) {
+      return 'I’m not confident recommending a medicine. Please consult a pharmacist or doctor.';
+    }
+
+    return resp;
   }
 }

@@ -8,6 +8,10 @@ import 'medicine_detail_screen.dart';
 import 'register_medicine_dialog.dart';
 import 'report_screen.dart';
 import 'audit_screen.dart';
+import 'chat_screen.dart';
+import 'contact_screen.dart';
+import '../widgets/app_drawer.dart';
+import '../widgets/custom_bottom_nav_bar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,6 +24,7 @@ class HomeScreenState extends State<HomeScreen> {
   final TextEditingController _searchController = TextEditingController();
   List<Medicine> _filteredMedicines = [];
   int _selectedCategoryIndex = 0;
+  int _selectedNavIndex = 0;
   final List<String> _categories = [
     'All',
     'Antibiotics',
@@ -67,6 +72,46 @@ class HomeScreenState extends State<HomeScreen> {
     }).toList();
 
     return Scaffold(
+      drawer: AppDrawer(
+        onRegister: () {
+          Navigator.of(context).pop();
+          showModalBottomSheet<String>(
+            context: context,
+            isScrollControlled: true,
+            builder: (context) => RegisterMedicineDialog(),
+          ).then((category) {
+            if (category != null && category != 'All') {
+              final index = _categories.indexOf(category);
+              if (index != -1) {
+                setState(() {
+                  _selectedCategoryIndex = index;
+                });
+              }
+            }
+          });
+        },
+        onContact: () {
+          Navigator.of(context).pop();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ContactScreen()),
+          );
+        },
+        onTrash: () {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Trash view not implemented yet')),
+          );
+        },
+        onHelp: () {
+          Navigator.of(context).pop();
+          showAboutDialog(
+            context: context,
+            applicationName: 'Pharmacy Manager',
+            children: [Text('Help and documentation can be added here.')],
+          );
+        },
+      ),
       appBar: AppBar(
         title: Row(
           children: [
@@ -508,139 +553,47 @@ class HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: Container(
-        height: 60,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withAlpha(25),
-              blurRadius: 8,
-              offset: Offset(0, -2),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            // Register button
-            GestureDetector(
-              onTap: () {
-                showModalBottomSheet<String>(
-                  context: context,
-                  isScrollControlled: true,
-                  builder: (context) => RegisterMedicineDialog(),
-                ).then((category) {
-                  if (category != null && category != 'All') {
-                    final index = _categories.indexOf(category);
-                    if (index != -1) {
-                      setState(() {
-                        _selectedCategoryIndex = index;
-                      });
-                    }
-                  }
+      // register button is rendered inline inside CustomBottomNavBar
+      bottomNavigationBar: CustomBottomNavBar(
+        pharmacyProvider: pharmacyProvider,
+        selectedIndex: _selectedNavIndex,
+        onSelect: (i) => setState(() => _selectedNavIndex = i),
+        onHome: () => setState(() => _selectedNavIndex = 0),
+        onRegister: () {
+          showModalBottomSheet<String>(
+            context: context,
+            isScrollControlled: true,
+            builder: (context) => RegisterMedicineDialog(),
+          ).then((category) {
+            if (category != null && category != 'All') {
+              final index = _categories.indexOf(category);
+              if (index != -1) {
+                setState(() {
+                  _selectedCategoryIndex = index;
                 });
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.add_circle_outline,
-                    color: Color(0xFF6C757D),
-                    size: 24,
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Register',
-                    style: TextStyle(color: Color(0xFF6C757D), fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            // Reports button with notification
-            GestureDetector(
-              onTap: () {
-                pharmacyProvider.clearNewReportsNotification();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => ReportScreen()),
-                );
-              },
-              child: Stack(
-                children: [
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.bar_chart_outlined,
-                        color: Color(0xFF6C757D),
-                        size: 24,
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'Reports',
-                        style: TextStyle(
-                          color: Color(0xFF6C757D),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (pharmacyProvider.newReportsCount > 0)
-                    Positioned(
-                      right: 8,
-                      top: -2,
-                      child: Container(
-                        padding: EdgeInsets.all(4),
-                        constraints: BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Color(0xFF007BFF), // Blue for reports
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 1.5),
-                        ),
-                        child: Text(
-                          '${pharmacyProvider.newReportsCount}',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            // Audit button
-            GestureDetector(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => AuditScreen()),
-                );
-              },
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.assessment_outlined,
-                    color: Color(0xFF6C757D),
-                    size: 24,
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Audit',
-                    style: TextStyle(color: Color(0xFF6C757D), fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+              }
+            }
+          });
+        },
+        onChat: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ChatScreen()),
+          );
+        },
+        onReports: () {
+          pharmacyProvider.clearNewReportsNotification();
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => ReportScreen()),
+          );
+        },
+        onAudit: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => AuditScreen()),
+          );
+        },
       ),
     );
   }

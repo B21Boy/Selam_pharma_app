@@ -8,6 +8,11 @@ import 'package:path_provider/path_provider.dart';
 import '../providers/pharmacy_provider.dart';
 import '../models/report.dart';
 import '../models/medicine.dart';
+import '../widgets/custom_bottom_nav_bar.dart';
+import 'register_medicine_dialog.dart';
+import 'chat_screen.dart';
+import 'report_screen.dart';
+import 'home_screen.dart';
 
 class AuditScreen extends StatefulWidget {
   const AuditScreen({super.key});
@@ -18,6 +23,7 @@ class AuditScreen extends StatefulWidget {
 
 class _AuditScreenState extends State<AuditScreen> {
   int _selectedPeriodIndex = 0;
+  int _selectedNavIndex = 3;
   final List<String> _timePeriods = [
     'Today',
     'This Week',
@@ -395,7 +401,6 @@ class _AuditScreenState extends State<AuditScreen> {
                               barTouchData: BarTouchData(
                                 enabled: true,
                                 touchTooltipData: BarTouchTooltipData(
-                                  tooltipBgColor: const Color(0xFF007BFF),
                                   getTooltipItem:
                                       (group, groupIndex, rod, rodIndex) {
                                         final medicine =
@@ -406,7 +411,7 @@ class _AuditScreenState extends State<AuditScreen> {
                                         return BarTooltipItem(
                                           '$medicine\n${rod.toY.toInt()} units',
                                           GoogleFonts.montserrat(
-                                            color: Colors.white,
+                                            color: Colors.black,
                                             fontWeight: FontWeight.w600,
                                           ),
                                         );
@@ -563,6 +568,7 @@ class _AuditScreenState extends State<AuditScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Text(
           'Audit',
           style: GoogleFonts.montserrat(
@@ -632,6 +638,38 @@ class _AuditScreenState extends State<AuditScreen> {
             child: _buildPeriodContent(_timePeriods[_selectedPeriodIndex]),
           ),
         ],
+      ),
+      // register button is rendered inline inside CustomBottomNavBar
+      bottomNavigationBar: CustomBottomNavBar(
+        pharmacyProvider: context.watch<PharmacyProvider>(),
+        selectedIndex: _selectedNavIndex,
+        onSelect: (i) => setState(() => _selectedNavIndex = i),
+        onHome: () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        },
+        onRegister: () {
+          showModalBottomSheet<String>(
+            context: context,
+            isScrollControlled: true,
+            builder: (context) => RegisterMedicineDialog(),
+          );
+        },
+        onChat: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ChatScreen()),
+          );
+        },
+        onReports: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ReportScreen()),
+          );
+        },
+        onAudit: () {},
       ),
     );
   }

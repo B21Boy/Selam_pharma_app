@@ -29,7 +29,10 @@
 
     <title>SHMed</title>
     <link rel="manifest" href="manifest.json">
-    <style id="splash-screen-style">
+    
+  
+  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
+  <style id="splash-screen-style">
     html {
       height: 100%
     }
@@ -37,7 +40,7 @@
     body {
       margin: 0;
       min-height: 100%;
-      background-color: #ffffff;
+      background-color: #0D47A1;
           background-size: 100% 100%;
     }
 
@@ -94,14 +97,27 @@
       document.body.style.background = "transparent";
     }
   </script>
-  <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport">
 </head>
   <body>
-  <picture id="splash">
-      <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
-      <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
-  </picture>
+  
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+      import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyBs2WKXgbNeNvv_6JoatYOTsiz6zWl-Y5Y",
+        authDomain: "pharmacy-app-8fab8.firebaseapp.com",
+        projectId: "pharmacy-app-8fab8",
+        storageBucket: "pharmacy-app-8fab8.firebasestorage.app",
+        messagingSenderId: "336526161177",
+        appId: "1:336526161177:web:5adbc2f3d410827c5cc188"
+      };
+
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      // expose to window for debug/access from Dart JS interop if needed
+      window.__firebase = { app, auth };
+    </script>
     <script src="flutter_bootstrap.js" async=""></script>
   
 

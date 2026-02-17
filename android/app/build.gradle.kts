@@ -4,8 +4,11 @@ import java.io.FileInputStream
 plugins {
     id("com.android.application")
     id("kotlin-android")
-    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+    id("com.google.gms.google-services") 
+
+
+
 }
 
 val keystoreProperties = Properties()
@@ -15,7 +18,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.example.shmed"
+    namespace = "com.deksi.pharmacy"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -30,7 +33,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.shmed"
+        applicationId = "com.deksi.pharmacy"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -54,6 +57,9 @@ android {
         }
     }
 }
+
+// Firebase native SDKs are managed by FlutterFire plugins; avoid adding
+// direct Android dependencies here to prevent version conflicts.
 
 flutter {
     source = "../.."

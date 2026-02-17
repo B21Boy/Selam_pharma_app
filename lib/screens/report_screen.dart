@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../widgets/custom_bottom_nav_bar.dart';
+import '../screens/register_medicine_dialog.dart';
+import 'chat_screen.dart';
+import 'audit_screen.dart';
+import 'home_screen.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/pharmacy_provider.dart';
@@ -15,6 +20,7 @@ class ReportScreen extends StatefulWidget {
 
 class ReportScreenState extends State<ReportScreen> {
   final TextEditingController _searchController = TextEditingController();
+  int _selectedNavIndex = 2;
   int _selectedPeriodIndex = 0;
   final List<String> _timePeriods = [
     'Today',
@@ -139,6 +145,7 @@ class ReportScreenState extends State<ReportScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Text(
           'Reports',
           style: GoogleFonts.montserrat(
@@ -427,6 +434,44 @@ class ReportScreenState extends State<ReportScreen> {
             ),
           ),
         ],
+      ),
+      // register button is rendered inline inside CustomBottomNavBar
+      bottomNavigationBar: CustomBottomNavBar(
+        pharmacyProvider: context.watch<PharmacyProvider>(),
+        selectedIndex: _selectedNavIndex,
+        onSelect: (i) => setState(() => _selectedNavIndex = i),
+        onHome: () {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+          );
+        },
+        onRegister: () {
+          showModalBottomSheet<String>(
+            context: context,
+            isScrollControlled: true,
+            builder: (context) => RegisterMedicineDialog(),
+          ).then((category) {
+            if (category != null && category != 'All') {
+              // no-op for report screen; user can change category after register
+            }
+          });
+        },
+        onChat: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ChatScreen()),
+          );
+        },
+        onReports: () {
+          // Already on reports; maybe refresh
+        },
+        onAudit: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const AuditScreen()),
+          );
+        },
       ),
     );
   }

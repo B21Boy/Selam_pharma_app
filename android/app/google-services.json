@@ -1,0 +1,62 @@
+{
+  "project_info": {
+    "project_number": "336526161177",
+    "project_id": "pharmacy-app-8fab8",
+    "storage_bucket": "pharmacy-app-8fab8.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:336526161177:android:4f50de3ada37b2125cc188",
+        "android_client_info": {
+          "package_name": "com.deksi.pharmacy"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "336526161177-1b7ibsvqt9j5uhs26t9sqhvtagcom8k8.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.deksi.pharmacy",
+            "certificate_hash": "3cf6096b21ceaa62e66550612de962678016164b"
+          }
+        },
+        {
+          "client_id": "336526161177-fhjclo5oearsg2vppt1gqf3iulbr8oep.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.deksi.pharmacy",
+            "certificate_hash": "bce5bbe6df6b093b0bb158b84fc33e18ae2a1efb"
+          }
+        },
+        {
+          "client_id": "336526161177-o7q6340g3dhv6qa59hrbad04uh5h3mod.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAenZZShOy9Oz2n86PlCOPdaJrG8ZszHxU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "336526161177-o7q6340g3dhv6qa59hrbad04uh5h3mod.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "336526161177-4oflh2tc03ujrlr28j8g5rpsvq5rgttn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.deksi.pharmacyios"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

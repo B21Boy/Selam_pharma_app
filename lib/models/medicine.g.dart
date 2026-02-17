@@ -26,13 +26,16 @@ class MedicineAdapter extends TypeAdapter<Medicine> {
       soldQty: fields[6] as int,
       category: fields[7] as String?,
       barcode: fields[8] as String?,
-    );
+    )
+      ..imageUrl = fields[9] as String?
+      ..cloudinaryPublicId = fields[10] as String?
+      ..lastModifiedMillis = fields[11] as int?;
   }
 
   @override
   void write(BinaryWriter writer, Medicine obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -50,7 +53,13 @@ class MedicineAdapter extends TypeAdapter<Medicine> {
       ..writeByte(7)
       ..write(obj.category)
       ..writeByte(8)
-      ..write(obj.barcode);
+      ..write(obj.barcode)
+      ..writeByte(9)
+      ..write(obj.imageUrl)
+      ..writeByte(10)
+      ..write(obj.cloudinaryPublicId)
+      ..writeByte(11)
+      ..write(obj.lastModifiedMillis);
   }
 
   @override

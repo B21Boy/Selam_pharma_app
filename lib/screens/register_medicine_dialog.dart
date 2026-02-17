@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -8,6 +9,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../providers/pharmacy_provider.dart';
 import '../models/medicine.dart';
+import '../services/cloudnary.dart';
 
 class RegisterMedicineDialog extends StatefulWidget {
   const RegisterMedicineDialog({super.key});
@@ -437,7 +439,65 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
             : null,
       );
 
-      provider.addMedicine(medicine);
+      // If there's an image selected, upload it to Cloudinary first so the
+      // uploaded URL and public id are stored immediately in Hive/Firestore.
+      if (_imageBytes != null) {
+        try {
+          setState(() {
+            _isLoading = true;
+          });
+          final filename = '${medicine.id}.jpg';
+          if (mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Uploading image...')));
+          }
+          final res = await CloudinaryService.uploadImageBytes(
+            _imageBytes!,
+            filename,
+          );
+          medicine.imageUrl = res['secure_url'];
+          medicine.cloudinaryPublicId = res['public_id'];
+          medicine.lastModifiedMillis = DateTime.now().millisecondsSinceEpoch;
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Image uploaded successfully')),
+            );
+          }
+        } catch (e, st) {
+          // Upload failed; show error but still allow local save
+          debugPrint('RegisterMedicine: image upload error: $e');
+          debugPrintStack(stackTrace: st);
+          if (mounted) {
+            showDialog<void>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Image upload failed'),
+                content: SingleChildScrollView(
+                  child: Text(
+                    kDebugMode
+                        ? 'Error: $e\n\nStack:\n$st'
+                        : 'Image upload failed. Saved locally only.',
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+          }
+        } finally {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+
+      await provider.addMedicine(medicine);
+      if (!mounted) return;
 
       // Add to recent items
       final recentItem = {

@@ -1,4 +1,5 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.deksi.pharmacy">
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
@@ -7,7 +8,7 @@
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity
-            android:name=".MainActivity"
+            android:name="com.deksi.pharmacy.MainActivity"
             android:exported="true"
             android:launchMode="singleTop"
             android:taskAffinity=""
