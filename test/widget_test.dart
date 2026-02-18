@@ -7,15 +7,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter/services.dart';
-import 'dart:io';
-import 'package:flutter_test/flutter_test.dart';
+// Removed unused imports
 
 void main() {
   testWidgets('Counter increments smoke test', (WidgetTester tester) async {
     // A minimal counter widget for tests to avoid app-wide async dependencies.
     await tester.pumpWidget(
-      MaterialApp(home: Scaffold(body: CounterTestWidget())),
+      MaterialApp(home: Scaffold(body: _CounterTestWidget())),
     );
 
     expect(find.text('0'), findsOneWidget);
@@ -29,12 +27,16 @@ void main() {
   });
 }
 
-class CounterTestWidget extends StatefulWidget {
+class _CounterTestWidget extends StatefulWidget {
+  // Parameter `key` is intentionally unused in this test widget.
+  // ignore: unused_element_parameter
+  const _CounterTestWidget({super.key});
+
   @override
   _CounterTestWidgetState createState() => _CounterTestWidgetState();
 }
 
-class _CounterTestWidgetState extends State<CounterTestWidget> {
+class _CounterTestWidgetState extends State<_CounterTestWidget> {
   int _count = 0;
 
   @override

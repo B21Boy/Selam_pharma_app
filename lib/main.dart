@@ -241,14 +241,16 @@ class MyApp extends StatelessWidget {
                           if (isPermDenied) ...[
                             TextButton(
                               onPressed: () async {
+                                final navigator = Navigator.of(context);
+                                final messenger = ScaffoldMessenger.of(context);
                                 try {
                                   await AuthService().signOut();
-                                  Navigator.of(context).pushNamedAndRemoveUntil(
+                                  navigator.pushNamedAndRemoveUntil(
                                     '/login',
                                     (route) => false,
                                   );
                                 } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
+                                  messenger.showSnackBar(
                                     SnackBar(
                                       content: Text('Sign out failed: $e'),
                                     ),

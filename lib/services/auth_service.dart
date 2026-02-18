@@ -69,11 +69,11 @@ class AuthService {
     if (user == null) throw Exception('No user signed in');
     final uid = user.uid;
 
-    final FirebaseFirestore _db = FirebaseFirestore.instance;
+    final FirebaseFirestore db = FirebaseFirestore.instance;
 
     try {
       // Delete user's medicines subcollection documents if present.
-      final medsCol = _db.collection('users').doc(uid).collection('medicines');
+      final medsCol = db.collection('users').doc(uid).collection('medicines');
       final snap = await medsCol.get();
       for (final doc in snap.docs) {
         try {
@@ -87,7 +87,7 @@ class AuthService {
       }
 
       // Delete user document
-      await _db.collection('users').doc(uid).delete();
+      await db.collection('users').doc(uid).delete();
     } catch (e) {
       debugPrint('AuthService.deleteAccount: firestore cleanup error: $e');
     }
