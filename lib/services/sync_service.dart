@@ -7,6 +7,17 @@ import 'package:flutter/foundation.dart';
 import '../models/medicine.dart';
 import 'cloudnary.dart';
 
+// Top-level helper used by `compute` to fetch image bytes in a background
+// isolate. Keep this function small and self-contained so it can be serialized
+// and run off the main isolate.
+Future<Uint8List?> _fetchImageBytes(String url) async {
+  try {
+    final resp = await http.get(Uri.parse(url));
+    if (resp.statusCode == 200) return resp.bodyBytes;
+  } catch (_) {}
+  return null;
+}
+
 /// SyncService keeps Hive `medicines` box, Firestore per-user
 /// `users/{uid}/medicines` collection, and Cloudinary images in sync.
 class SyncService {
@@ -283,11 +294,12 @@ class SyncService {
           ? remoteLast
           : DateTime.now().millisecondsSinceEpoch;
 
-      // if imageUrl exists, try to download bytes
+      // if imageUrl exists, download bytes in a background isolate to avoid
+      // blocking the main/UI isolate.
       if (newMed.imageUrl != null && newMed.imageUrl!.isNotEmpty) {
         try {
-          final resp = await http.get(Uri.parse(newMed.imageUrl!));
-          if (resp.statusCode == 200) newMed.imageBytes = resp.bodyBytes;
+          final bytes = await compute(_fetchImageBytes, newMed.imageUrl!);
+          if (bytes != null) newMed.imageBytes = bytes;
         } catch (e) {
           debugPrint('Failed to download image for $id: $e');
         }

@@ -34,7 +34,10 @@ void main() async {
   SyncService? syncService;
   try {
     syncService = SyncService();
-    await syncService.init();
+    // Initialize SyncService in background so we don't block the UI startup.
+    syncService.init().catchError((e) {
+      debugPrint('Warning: SyncService failed to init: $e');
+    });
   } catch (e) {
     debugPrint('Warning: SyncService failed to init: $e');
   }
@@ -65,7 +68,7 @@ class MyApp extends StatelessWidget {
         builder: (context, themeProvider, child) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
-            title: 'SHMed',
+            title: 'Drugo',
             theme: ThemeData(
               primaryColor: Color(0xFF007BFF), // Medical blue
               colorScheme: ColorScheme.light(

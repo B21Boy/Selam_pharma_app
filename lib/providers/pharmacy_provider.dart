@@ -22,11 +22,21 @@ class PharmacyProvider extends ChangeNotifier {
   /// Initialize boxes and listen for auth changes to open per-user boxes.
   Future<void> initBoxes() async {
     _authSub = FirebaseAuth.instance.authStateChanges().listen((user) async {
-      await _openBoxesForUid(user?.uid);
+      // Handle auth changes; run async but don't block the listener caller.
+      _openBoxesForUid(user?.uid).catchError((e) {
+        debugPrint('PharmacyProvider: open boxes on auth change failed: $e');
+      });
     });
 
-    await _openBoxesForUid(FirebaseAuth.instance.currentUser?.uid);
-    _initialized = true;
+    // Open boxes for current user in background to avoid blocking UI creation.
+    _openBoxesForUid(FirebaseAuth.instance.currentUser?.uid)
+        .then((_) {
+          _initialized = true;
+          notifyListeners();
+        })
+        .catchError((e) {
+          debugPrint('PharmacyProvider: open boxes failed: $e');
+        });
   }
 
   Future<void> loadData() async {
