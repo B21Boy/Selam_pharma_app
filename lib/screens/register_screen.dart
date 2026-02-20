@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import '../utils/ui_helpers.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
+import 'home_screen.dart';
+import '../widgets/auth_header.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -13,15 +17,48 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _usernameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
   final AuthService _auth = AuthService();
   bool _loading = false;
+  bool _obscurePass = true;
+  bool _obscureConfirm = true;
+  String? _inlineError;
+  Timer? _inlineErrorTimer;
+  String? _emailError;
+  String? _passwordError;
+  String? _usernameError;
 
-  void _showError(Object e) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(_auth.friendlyError(e))));
+  void _showError(Object e) => _displayError(_auth.friendlyError(e));
+
+  void _displayError(String message) {
+    if (mounted) setState(() => _inlineError = message);
+
+    if (mounted) {
+      showAppSnackBar(
+        context,
+        message,
+        error: true,
+        duration: const Duration(seconds: 4),
+      );
+    }
+
+    _inlineErrorTimer?.cancel();
+    _inlineErrorTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted) setState(() => _inlineError = null);
+    });
+  }
+
+  @override
+  void dispose() {
+    _inlineErrorTimer?.cancel();
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -52,7 +89,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         final profile = {
           'email': _emailCtrl.text.trim(),
           'role': 'user',
-          'displayName': null,
+          'displayName': _usernameCtrl.text.trim(),
+          'username': _usernameCtrl.text.trim(),
           'createdAt': DateTime.now().toUtc().toIso8601String(),
         };
         await FirestoreService.set('users/$uid', profile);
@@ -69,9 +107,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Account created. Please sign in.')),
-        );
+        showAppSnackBar(context, 'Account created. Please sign in.');
         Navigator.pop(context, _emailCtrl.text.trim());
       }
     } catch (e, st) {
@@ -104,9 +140,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             await _auth.signOut();
           } catch (_) {}
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Account created. Please sign in.')),
-            );
+            showAppSnackBar(context, 'Account created. Please sign in.');
             Navigator.pop(context, email);
             setState(() => _loading = false);
             return;
@@ -127,9 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               await _auth.signOut();
             } catch (_) {}
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Account created. Please sign in.')),
-              );
+              showAppSnackBar(context, 'Account created. Please sign in.');
               Navigator.pop(context, email);
               setState(() => _loading = false);
               return;
@@ -140,36 +172,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
           // continue to fetchSignInMethods attempts
         }
 
-        // 3) Fetch sign-in methods with multiple attempts/backoff.
-        const attempts = 5;
-        for (var i = 0; i < attempts; i++) {
-          try {
-            // exponential backoff
-            await Future.delayed(Duration(milliseconds: 400 * (i + 1)));
-            final methods = await FirebaseAuth.instance
-                .fetchSignInMethodsForEmail(email);
-            if (methods.isNotEmpty) {
-              debugPrint(
-                'User exists according to fetchSignInMethods: $methods',
-              );
-              try {
-                await _auth.signOut();
-              } catch (_) {}
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Account created. Please sign in.')),
-                );
-                if (mounted) {
-                  Navigator.pop(context, email);
-                  setState(() => _loading = false);
-                  return;
-                }
-              }
-            }
-          } catch (inner) {
-            debugPrint('fetchSignInMethods attempt ${i + 1} failed: $inner');
-          }
-        }
+        // 3) The Firebase SDK removed fetchSignInMethodsForEmail in newer
+        // releases. We won't attempt email-enumeration; fall through to
+        // the general error handling below.
+        debugPrint('Skipping fetchSignInMethodsForEmail checks (removed API)');
       } catch (checkErr) {
         debugPrint('Error checking sign-in status: $checkErr');
       }
@@ -183,9 +189,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         message = 'Could not create account. Please try again.';
       }
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        showAppSnackBar(context, message, error: true);
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -195,9 +199,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _google() async {
     setState(() => _loading = true);
     try {
-      await _auth.signInWithGoogle();
-      if (!mounted) return;
-      Navigator.pop(context, null);
+      final cred = await _auth.signInWithGoogle();
+      User? u = FirebaseAuth.instance.currentUser ?? cred?.user;
+      if (u != null) {
+        // Ensure Firestore profile exists
+        try {
+          final uid = u.uid;
+          final doc = await FirestoreService.getDocument('users/$uid');
+          if (doc == null || !doc.exists) {
+            await FirestoreService.set('users/$uid', {
+              'email': u.email,
+              'role': 'user',
+              'displayName': u.displayName ?? '',
+              'createdAt': DateTime.now().toUtc().toIso8601String(),
+            });
+            debugPrint('Created missing Firestore profile for $uid');
+          }
+        } catch (profileErr) {
+          debugPrint('Error loading/creating Firestore profile: $profileErr');
+        }
+
+        if (!mounted) return;
+        showAppSnackBar(context, 'Signed in as ${u.email}');
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => HomeScreen()),
+          (route) => false,
+        );
+      }
     } catch (e) {
       if (e is AccountExistsWithDifferentCredential) {
         showDialog<void>(
@@ -225,53 +253,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: SingleChildScrollView(
           physics: BouncingScrollPhysics(),
           child: Column(
             children: [
-              Container(
-                height: 200,
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF6FB1FF), Color(0xFF2D79FF)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(48),
-                    bottomRight: Radius.circular(48),
-                  ),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Create Account',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 26,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              AuthHeader(title: 'Create Account'),
 
               SizedBox(height: 18),
 
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20.0),
                 child: Card(
-                  elevation: 6,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(24),
-                  ),
+                  color: theme.cardColor,
+                  elevation: theme.cardTheme.elevation ?? 6,
+                  shape:
+                      theme.cardTheme.shape ??
+                      RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
                   child: Padding(
                     padding: const EdgeInsets.all(18.0),
                     child: Form(
@@ -279,34 +284,134 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
+                          if (_inlineError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.error,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.error_outline,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _inlineError!,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.close,
+                                        color: Colors.white70,
+                                      ),
+                                      onPressed: () =>
+                                          setState(() => _inlineError = null),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          // Toggle row: show Log In first, Sign In active second
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              TextButton(
+                                onPressed: () =>
+                                    Navigator.pushNamed(context, '/login'),
+                                child: Text(
+                                  'Log In',
+                                  style: TextStyle(
+                                    color: cs.onSurface.withValues(alpha: 0.75),
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              AnimatedSwitcher(
+                                duration: const Duration(milliseconds: 260),
+                                transitionBuilder: (child, anim) =>
+                                    FadeTransition(
+                                      opacity: anim,
+                                      child: ScaleTransition(
+                                        scale: anim,
+                                        child: child,
+                                      ),
+                                    ),
+                                child: Container(
+                                  key: const ValueKey('active_signin'),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: cs.primary,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    'Sign In',
+                                    style: TextStyle(
+                                      color: cs.onPrimary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          SizedBox(height: 18),
+
+                          // Username (store into Firestore profile on register)
+                          TextFormField(
+                            controller: _usernameCtrl,
+                            decoration: InputDecoration(
+                              hintText: 'Username',
+                              errorText: _usernameError,
+                            ),
+                            textCapitalization: TextCapitalization.words,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Enter a username';
+                              }
+                              if (v.trim().length < 3) {
+                                return 'Username too short';
+                              }
+                              return null;
+                            },
+                          ),
+
+                          SizedBox(height: 12),
+
                           TextFormField(
                             controller: _emailCtrl,
                             decoration: InputDecoration(
                               hintText: 'Email',
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 16,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: BorderSide(
-                                  color: Color(0xFFB8CDEB),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF2D79FF),
-                                  width: 2,
-                                ),
-                              ),
+                              errorText: _emailError,
                             ),
                             keyboardType: TextInputType.emailAddress,
-                            validator: (v) => (v == null || !v.contains('@'))
-                                ? 'Enter a valid email'
-                                : null,
+                            validator: (v) {
+                              if (v == null || v.trim().isEmpty) {
+                                return 'Enter an email';
+                              }
+                              final email = v.trim();
+                              final re = RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+$");
+                              return re.hasMatch(email)
+                                  ? null
+                                  : 'Enter a valid email';
+                            },
                           ),
 
                           SizedBox(height: 12),
@@ -315,30 +420,44 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             controller: _passCtrl,
                             decoration: InputDecoration(
                               hintText: 'Password',
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 16,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: BorderSide(
-                                  color: Color(0xFFB8CDEB),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF2D79FF),
-                                  width: 2,
+                              errorText: _passwordError,
+                              suffixIcon: AnimatedRotation(
+                                turns: _obscurePass ? 0.0 : 0.5,
+                                duration: const Duration(milliseconds: 220),
+                                curve: Curves.easeInOut,
+                                child: IconButton(
+                                  tooltip: _obscurePass
+                                      ? 'Show password'
+                                      : 'Hide password',
+                                  icon: Icon(
+                                    _obscurePass
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.65),
+                                  ),
+                                  onPressed: () => setState(
+                                    () => _obscurePass = !_obscurePass,
+                                  ),
                                 ),
                               ),
                             ),
-                            obscureText: true,
-                            validator: (v) => (v == null || v.length < 6)
-                                ? 'Password too short'
-                                : null,
+                            obscureText: _obscurePass,
+                            validator: (v) {
+                              if (v == null || v.isEmpty) {
+                                return 'Enter a password';
+                              }
+                              if (v.length < 6) {
+                                return 'Password too short';
+                              }
+                              final hasDigit = RegExp(r"[0-9]").hasMatch(v);
+                              if (!hasDigit) {
+                                return 'Password must include a number (0-9)';
+                              }
+                              return null;
+                            },
                           ),
 
                           SizedBox(height: 12),
@@ -347,27 +466,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             controller: _confirmCtrl,
                             decoration: InputDecoration(
                               hintText: 'Confirm Password',
-                              filled: true,
-                              fillColor: Colors.white,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 20,
-                                vertical: 16,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: BorderSide(
-                                  color: Color(0xFFB8CDEB),
-                                ),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(28),
-                                borderSide: BorderSide(
-                                  color: Color(0xFF2D79FF),
-                                  width: 2,
+                              suffixIcon: AnimatedRotation(
+                                turns: _obscureConfirm ? 0.0 : 0.5,
+                                duration: const Duration(milliseconds: 220),
+                                curve: Curves.easeInOut,
+                                child: IconButton(
+                                  tooltip: _obscureConfirm
+                                      ? 'Show password'
+                                      : 'Hide password',
+                                  icon: Icon(
+                                    _obscureConfirm
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.65),
+                                  ),
+                                  onPressed: () => setState(
+                                    () => _obscureConfirm = !_obscureConfirm,
+                                  ),
                                 ),
                               ),
                             ),
-                            obscureText: true,
+                            obscureText: _obscureConfirm,
                           ),
 
                           SizedBox(height: 18),
@@ -375,11 +497,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           ElevatedButton(
                             onPressed: _loading ? null : _submit,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFF2D79FF),
+                              backgroundColor: cs.primary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(28),
                               ),
-                              padding: EdgeInsets.symmetric(vertical: 14),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
                               elevation: 4,
                             ),
                             child: _loading

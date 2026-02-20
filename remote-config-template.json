@@ -1,0 +1,8 @@
+{
+  "parameters": {
+    "google_server_client_id": {
+      "defaultValue": { "value": "336526161177-o7q6340g3dhv6qa59hrbad04uh5h3mod.apps.googleusercontent.com" },
+      "description": "Web client ID used by Android/Google Sign-In (serverClientId)"
+    }
+  }
+}

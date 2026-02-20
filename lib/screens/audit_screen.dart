@@ -13,6 +13,7 @@ import 'register_medicine_dialog.dart';
 import 'chat_screen.dart';
 import 'report_screen.dart';
 import 'home_screen.dart';
+import '../utils/ui_helpers.dart';
 
 class AuditScreen extends StatefulWidget {
   const AuditScreen({super.key});
@@ -126,21 +127,11 @@ class _AuditScreenState extends State<AuditScreen> {
       await file.writeAsString(csvData.toString());
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Data exported to ${file.path}'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        showAppSnackBar(context, 'Data exported to ${file.path}');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to export data'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        showAppSnackBar(context, 'Failed to export data', error: true);
       }
     }
   }

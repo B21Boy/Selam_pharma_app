@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher_string.dart';
+import '../utils/ui_helpers.dart';
 
 class ContactScreen extends StatefulWidget {
   static const routeName = '/contact';
@@ -44,11 +45,7 @@ class _ContactScreenState extends State<ContactScreen> {
           .timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Message sent — we will contact you soon'),
-            ),
-          );
+          showAppSnackBar(context, 'Message sent — we will contact you soon');
           _msgCtrl.clear();
         }
       } else {
@@ -65,8 +62,10 @@ class _ContactScreenState extends State<ContactScreen> {
         await launchUrlString(mailto);
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Unable to send — try again later')),
+          showAppSnackBar(
+            context,
+            'Unable to send — try again later',
+            error: true,
           );
         }
       }

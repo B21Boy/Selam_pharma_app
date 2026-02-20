@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../providers/pharmacy_provider.dart';
 import '../models/medicine.dart';
 import '../models/report.dart';
+import '../utils/ui_helpers.dart';
 
 class MedicineDetailScreen extends StatefulWidget {
   final Medicine medicine;
@@ -131,9 +132,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
               provider.updateMedicine(_currentMedicine);
 
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Medicine restocked successfully')),
-              );
+              showAppSnackBar(context, 'Medicine restocked successfully');
             },
             child: Text('Restock'),
           ),
@@ -219,9 +218,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
               });
 
               Navigator.of(context).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Medicine updated successfully')),
-              );
+              showAppSnackBar(context, 'Medicine updated successfully');
             },
             child: Text('Update'),
           ),
@@ -470,18 +467,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
         await provider.addReport(report);
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Failed to add report: $e',
-                style: GoogleFonts.montserrat(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white,
-                ),
-              ),
-            ),
-          );
+          showAppSnackBar(context, 'Failed to add report: $e', error: true);
         }
         return;
       }
@@ -501,17 +487,10 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
       } catch (e) {
         if (mounted) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Failed to update medicine: $e',
-                  style: GoogleFonts.montserrat(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+            showAppSnackBar(
+              context,
+              'Failed to update medicine: $e',
+              error: true,
             );
           }
         }
@@ -525,18 +504,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Sale added to report',
-              style: GoogleFonts.montserrat(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        );
+        showAppSnackBar(context, 'Sale added to report');
       }
 
       _soldQtyController.clear();
@@ -551,18 +519,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
         errorMessage = 'Price must be greater than 0';
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              errorMessage,
-              style: GoogleFonts.montserrat(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        );
+        showAppSnackBar(context, errorMessage, error: true);
       }
     }
   }

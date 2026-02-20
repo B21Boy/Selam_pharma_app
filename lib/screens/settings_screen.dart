@@ -3,6 +3,7 @@
 // ignore_for_file: deprecated_member_use, use_build_context_synchronously
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../utils/ui_helpers.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -134,9 +135,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     subtitle: const Text('Export CSV / JSON'),
                     onTap: () {
                       // TODO: implement export
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Export started')),
-                      );
+                      showAppSnackBar(context, 'Export started');
                     },
                   ),
                   ListTile(
@@ -164,9 +163,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       );
                       if (!mounted) return;
                       if (ok == true) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Cache cleared')),
-                        );
+                        showAppSnackBar(context, 'Cache cleared');
                       }
                     },
                   ),
@@ -199,8 +196,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ).pushNamedAndRemoveUntil('/login', (route) => false);
                       } catch (e) {
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Sign out failed: $e')),
+                        showAppSnackBar(
+                          context,
+                          'Sign out failed: $e',
+                          error: true,
                         );
                       }
                     },
@@ -250,8 +249,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         if (!mounted) return;
                         Navigator.of(context).pop(); // pop progress
                         final msg = e.toString();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Delete failed: $msg')),
+                        showAppSnackBar(
+                          context,
+                          'Delete failed: $msg',
+                          error: true,
                         );
                       }
                     },

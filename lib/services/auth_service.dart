@@ -3,6 +3,9 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
+// Note: google_sign_in API uses a single shared instance. See package docs.
 
 class AccountExistsWithDifferentCredential implements Exception {
   final String email;
@@ -16,6 +19,17 @@ class AccountExistsWithDifferentCredential implements Exception {
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   AuthCredential? _pendingCredential;
+
+  // Read Google Web client ID from environment for safer configuration.
+  // Priority: .env (flutter_dotenv) -> --dart-define(GOOGLE_SERVER_CLIENT_ID)
+  // Example .env entry: GOOGLE_SERVER_CLIENT_ID=12345-abcde.apps.googleusercontent.com
+  String _resolveGoogleServerClientId() {
+    final fromDotenv = dotenv.env['GOOGLE_SERVER_CLIENT_ID'];
+    if (fromDotenv != null && fromDotenv.isNotEmpty) return fromDotenv;
+    final fromDefine = const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
+    if (fromDefine.isNotEmpty) return fromDefine;
+    return '';
+  }
 
   Stream<User?> authStateChanges() => _auth.authStateChanges();
 
@@ -109,14 +123,32 @@ class AuthService {
   }
 
   Future<UserCredential?> signInWithGoogle() async {
-    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-    if (googleUser == null) return null;
+    final serverClientId = _resolveGoogleServerClientId();
+    if (serverClientId.isEmpty) {
+      throw Exception(
+        'Google Sign-In not configured: set GOOGLE_SERVER_CLIENT_ID in .env, Remote Config (key: google_server_client_id), or pass --dart-define=GOOGLE_SERVER_CLIENT_ID=<id>. See GOOGLE_SIGNIN.md.',
+      );
+    }
 
-    final GoogleSignInAuthentication googleAuth =
-        await googleUser.authentication;
+    // Use the package's shared instance API (newer google_sign_in versions).
+    final gs = GoogleSignIn.instance;
+
+    // Initialize with the resolved server client id when available.
+    try {
+      await gs.initialize(serverClientId: serverClientId);
+    } catch (_) {}
+
+    GoogleSignInAccount googleUser;
+    try {
+      final GoogleSignInAccount result = await gs.authenticate();
+      googleUser = result;
+    } catch (_) {
+      throw Exception('Google Sign-In aborted or no account selected');
+    }
+
+    final GoogleSignInAuthentication googleAuth = googleUser.authentication;
 
     final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
       idToken: googleAuth.idToken,
     );
 
@@ -126,7 +158,7 @@ class AuthService {
       if (e.code == 'account-exists-with-different-credential') {
         _pendingCredential = credential;
         throw AccountExistsWithDifferentCredential(
-          e.email ?? '',
+          googleUser.email ?? '',
           e.message ?? '',
         );
       }

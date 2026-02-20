@@ -14,10 +14,6 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _fade;
   late final Animation<double> _scale;
   bool _navigated = false;
-  // Typing animation fields
-  late final AnimationController _typingController;
-  late final Animation<int> _typingCount;
-  late final AnimationController _cursorController;
   final String _appName = 'Drugo';
 
   @override
@@ -36,23 +32,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
     _start();
-    // Typing animation controllers
-    _typingController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
-    _typingCount = StepTween(
-      begin: 0,
-      end: _appName.length,
-    ).animate(CurvedAnimation(parent: _typingController, curve: Curves.linear));
-    _cursorController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 600),
-    )..repeat(reverse: true);
-    // start typing shortly after splash animation begins
-    Future.delayed(const Duration(milliseconds: 400), () {
-      if (mounted) _typingController.forward();
-    });
+    // keep simple splash: no typing animation, show full app name
   }
 
   Future<void> _start() async {
@@ -112,8 +92,6 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _controller.dispose();
-    _typingController.dispose();
-    _cursorController.dispose();
     super.dispose();
   }
 
@@ -132,18 +110,18 @@ class _SplashScreenState extends State<SplashScreen>
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // Rounded container with logo
+                  // Circular logo container
                   Container(
                     width: 140,
                     height: 140,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(28),
+                      shape: BoxShape.circle,
                       gradient: const LinearGradient(
                         colors: [Color(0xFF2D79FF), Color(0xFF6FB1FF)],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      boxShadow: [
+                      boxShadow: const [
                         BoxShadow(
                           color: Colors.black12,
                           blurRadius: 12,
@@ -154,39 +132,15 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Center(child: _buildLogo()),
                   ),
                   const SizedBox(height: 18),
-                  // Typing app name
-                  AnimatedBuilder(
-                    animation: _typingCount,
-                    builder: (context, child) {
-                      final count = _typingCount.value;
-                      final text = _appName.substring(0, count);
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            text,
-                            style: const TextStyle(
-                              color: Color(0xFF2D79FF),
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.2,
-                              fontSize: 34,
-                            ),
-                          ),
-                          SizedBox(width: 4),
-                          FadeTransition(
-                            opacity: _cursorController,
-                            child: const Text(
-                              '|',
-                              style: TextStyle(
-                                color: Color(0xFF2D79FF),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 34,
-                              ),
-                            ),
-                          ),
-                        ],
-                      );
-                    },
+                  // App name
+                  Text(
+                    _appName,
+                    style: const TextStyle(
+                      color: Color(0xFF2D79FF),
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1.2,
+                      fontSize: 34,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   const Text(

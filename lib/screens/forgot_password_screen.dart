@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../utils/ui_helpers.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -13,9 +14,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final AuthService _auth = AuthService();
   bool _loading = false;
 
-  void _showMsg(Object e) => ScaffoldMessenger.of(
-    context,
-  ).showSnackBar(SnackBar(content: Text(_auth.friendlyError(e))));
+  void _showMsg(Object e) {
+    final msg = e is String ? e : _auth.friendlyError(e);
+    showAppSnackBar(context, msg, error: e is! String);
+  }
 
   Future<void> _submit() async {
     if (mounted) setState(() => _loading = true);

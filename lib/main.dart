@@ -15,6 +15,8 @@ import 'screens/register_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/auth_service.dart';
+import 'theme/app_theme.dart';
+import 'utils/ui_helpers.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -69,145 +71,8 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'Drugo',
-            theme: ThemeData(
-              primaryColor: Color(0xFF007BFF), // Medical blue
-              colorScheme: ColorScheme.light(
-                primary: Color(0xFF007BFF),
-                secondary: Color(0xFF28A745), // Pharmacy green
-                surface: Colors.white,
-                onPrimary: Colors.white,
-                onSecondary: Colors.white,
-                onSurface: Colors.black87,
-              ),
-              scaffoldBackgroundColor: Color(0xFFF8F9FA),
-              appBarTheme: AppBarThemeData(
-                backgroundColor: Color(0xFF007BFF),
-                foregroundColor: Colors.white,
-                elevation: 4,
-                centerTitle: true,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(20),
-                    bottomRight: Radius.circular(20),
-                  ),
-                ),
-              ),
-              cardTheme: CardThemeData(
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                shadowColor: Colors.black12,
-              ),
-              inputDecorationTheme: InputDecorationTheme(
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Color(0xFFDEE2E6)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Color(0xFFDEE2E6)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Color(0xFF007BFF), width: 2),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-              ),
-              elevatedButtonTheme: ElevatedButtonThemeData(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF007BFF),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  elevation: 2,
-                ),
-              ),
-              bottomNavigationBarTheme: BottomNavigationBarThemeData(
-                backgroundColor: Colors.white,
-                selectedItemColor: Color(0xFF007BFF),
-                unselectedItemColor: Colors.grey,
-                elevation: 8,
-                type: BottomNavigationBarType.fixed,
-              ),
-            ),
-            darkTheme: ThemeData.dark().copyWith(
-              primaryColor: Color(0xFF007BFF),
-              colorScheme: ColorScheme.dark(
-                primary: Color(0xFF007BFF),
-                secondary: Color(0xFF28A745),
-                surface: Color(0xFF1E1E1E),
-                onPrimary: Colors.white,
-                onSecondary: Colors.white,
-                onSurface: Colors.white70,
-              ),
-              scaffoldBackgroundColor: Color(0xFF121212),
-              appBarTheme: AppBarThemeData(
-                backgroundColor: Color(0xFF007BFF),
-                foregroundColor: Colors.white,
-                elevation: 4,
-                centerTitle: true,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(20),
-                    bottomRight: Radius.circular(20),
-                  ),
-                ),
-              ),
-              cardTheme: CardThemeData(
-                color: Color(0xFF2D2D2D),
-                elevation: 4,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                shadowColor: Colors.black38,
-              ),
-              inputDecorationTheme: InputDecorationTheme(
-                filled: true,
-                fillColor: Color(0xFF2D2D2D),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Color(0xFF007BFF), width: 2),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey[600]!, width: 1),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Color(0xFF007BFF), width: 2),
-                ),
-                contentPadding: EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-              ),
-              elevatedButtonTheme: ElevatedButtonThemeData(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF007BFF),
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                  elevation: 2,
-                ),
-              ),
-              bottomNavigationBarTheme: BottomNavigationBarThemeData(
-                backgroundColor: Color(0xFF1E1E1E),
-                selectedItemColor: Color(0xFF007BFF),
-                unselectedItemColor: Colors.grey[400],
-                elevation: 8,
-                type: BottomNavigationBarType.fixed,
-              ),
-            ),
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
             themeMode: themeProvider.themeMode,
             routes: {
               '/login': (_) => LoginScreen(),
@@ -245,7 +110,6 @@ class MyApp extends StatelessWidget {
                             TextButton(
                               onPressed: () async {
                                 final navigator = Navigator.of(context);
-                                final messenger = ScaffoldMessenger.of(context);
                                 try {
                                   await AuthService().signOut();
                                   navigator.pushNamedAndRemoveUntil(
@@ -253,10 +117,10 @@ class MyApp extends StatelessWidget {
                                     (route) => false,
                                   );
                                 } catch (e) {
-                                  messenger.showSnackBar(
-                                    SnackBar(
-                                      content: Text('Sign out failed: $e'),
-                                    ),
+                                  showAppSnackBar(
+                                    context,
+                                    'Sign out failed: $e',
+                                    error: true,
                                   );
                                 }
                               },
@@ -284,6 +148,7 @@ class MyApp extends StatelessWidget {
               );
             },
             onGenerateRoute: (settings) {
+              // Animated transitions for a few important named routes.
               if (settings.name == '/auth') {
                 return PageRouteBuilder(
                   settings: settings,
@@ -316,6 +181,37 @@ class MyApp extends StatelessWidget {
                       },
                 );
               }
+
+              // Use the same smooth fade+slide for login/register route pushes.
+              if (settings.name == '/login' || settings.name == '/register') {
+                final Widget page = settings.name == '/login'
+                    ? LoginScreen()
+                    : RegisterScreen();
+                return PageRouteBuilder(
+                  settings: settings,
+                  pageBuilder: (context, animation, secondaryAnimation) => page,
+                  transitionDuration: const Duration(milliseconds: 420),
+                  transitionsBuilder:
+                      (context, animation, secondaryAnimation, child) {
+                        final curve = CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeInOut,
+                        );
+                        final offset = Tween<Offset>(
+                          begin: const Offset(0, 0.06),
+                          end: Offset.zero,
+                        ).animate(curve);
+                        return FadeTransition(
+                          opacity: curve,
+                          child: SlideTransition(
+                            position: offset,
+                            child: child,
+                          ),
+                        );
+                      },
+                );
+              }
+
               return null;
             },
             home: const SplashScreen(),

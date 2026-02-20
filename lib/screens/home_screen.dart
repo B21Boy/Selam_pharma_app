@@ -12,6 +12,7 @@ import 'chat_screen.dart';
 import 'contact_screen.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
+import '../utils/ui_helpers.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -99,9 +100,7 @@ class HomeScreenState extends State<HomeScreen> {
         },
         onTrash: () {
           Navigator.of(context).pop();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Trash view not implemented yet')),
-          );
+          showAppSnackBar(context, 'Trash view not implemented yet');
         },
         onHelp: () {
           Navigator.of(context).pop();
