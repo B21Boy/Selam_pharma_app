@@ -36,6 +36,8 @@ class SyncService {
   final Map<String, Medicine> _lastKnown = {};
   final Set<String> _updatingFromFirestore = {};
   final Set<String> _updatingFromHive = {};
+  final Set<String> _uploadingNow = {};
+  Timer? _retryTimer;
 
   Future<void> init() async {
     debugPrint(
@@ -67,6 +69,41 @@ class SyncService {
         final boxName = _boxNameForUid(newUid);
         try {
           _medicineBox = await Hive.openBox<Medicine>(boxName);
+
+          // If signing in (newUid != null) and there's a guest box, migrate any
+          // guest medicines into the user's box so offline-created items are
+          // not lost and will be synced to Firestore.
+          if (newUid != null) {
+            try {
+              final guestBox = await Hive.openBox<Medicine>('medicines_guest');
+              for (final gm in guestBox.values) {
+                if (!_medicineBox!.containsKey(gm.id)) {
+                  // copy the guest medicine into the user's box preserving bytes
+                  final copy = Medicine(
+                    id: gm.id,
+                    name: gm.name,
+                    totalQty: gm.totalQty,
+                    buyPrice: gm.buyPrice,
+                    sellPrice: gm.sellPrice,
+                    imageBytes: gm.imageBytes,
+                    soldQty: gm.soldQty,
+                    category: gm.category,
+                    barcode: gm.barcode,
+                    imageUrl: gm.imageUrl,
+                    cloudinaryPublicId: gm.cloudinaryPublicId,
+                    lastModifiedMillis:
+                        gm.lastModifiedMillis ??
+                        DateTime.now().millisecondsSinceEpoch,
+                    deletedAtMillis: gm.deletedAtMillis,
+                  );
+                  await _medicineBox!.put(copy.id, copy);
+                }
+              }
+            } catch (e) {
+              debugPrint('SyncService: guest->user box migration failed: $e');
+            }
+          }
+
           // prime cache from this user's local box
           for (final m in _medicineBox!.values) {
             _lastKnown[m.id] = m;
@@ -79,7 +116,27 @@ class SyncService {
       }
 
       _uid = newUid;
-      _attachFirestoreListener();
+      await _attachFirestoreListener();
+
+      // Immediately attempt pending uploads now that _uid is set (e.g., after
+      // a sign-in and possible guest->user migration). This ensures items put
+      // into the user's box during migration are quickly retried.
+      try {
+        await _retryPendingUploads();
+      } catch (e) {
+        debugPrint('SyncService: immediate retry failed: $e');
+      }
+    });
+
+    // Start a periodic retry timer to attempt uploads that previously failed
+    // (e.g., when device regains network). This scans for medicines that have
+    // `imageBytes` but no `cloudinaryPublicId` and retries uploading.
+    _retryTimer ??= Timer.periodic(const Duration(seconds: 30), (_) async {
+      try {
+        await _retryPendingUploads();
+      } catch (e) {
+        debugPrint('SyncService: retry pending uploads error: $e');
+      }
     });
   }
 
@@ -90,17 +147,56 @@ class SyncService {
     await _hiveSub?.cancel();
     await _firestoreSub?.cancel();
     await _authSub?.cancel();
+    _retryTimer?.cancel();
   }
 
-  void _attachFirestoreListener() {
+  Future<void> _retryPendingUploads() async {
+    if (_medicineBox == null || !_medicineBox!.isOpen) return;
+    final meds = _medicineBox!.values.where((m) {
+      return m.imageBytes != null &&
+          (m.cloudinaryPublicId == null || m.cloudinaryPublicId!.isEmpty);
+    }).toList();
+
+    for (final med in meds) {
+      if (_uploadingNow.contains(med.id)) continue;
+      _uploadingNow.add(med.id);
+      try {
+        await _handleLocalPut(med);
+      } catch (e) {
+        debugPrint('SyncService: retry upload failed for ${med.id}: $e');
+      } finally {
+        _uploadingNow.remove(med.id);
+      }
+    }
+  }
+
+  Future<void> _attachFirestoreListener() async {
     _firestoreSub?.cancel();
     if (_uid == null) return;
-    _firestoreSub = _db
-        .collection('users')
-        .doc(_uid)
-        .collection('medicines')
-        .snapshots()
-        .listen(_onFirestoreSnapshot, onError: _onFirestoreError);
+
+    final collRef = _db.collection('users').doc(_uid).collection('medicines');
+
+    // Listen for realtime updates
+    _firestoreSub = collRef.snapshots().listen(
+      _onFirestoreSnapshot,
+      onError: _onFirestoreError,
+    );
+
+    // Also perform a one-time fetch to ensure any existing remote documents
+    // that might have been missed are applied into Hive immediately.
+    try {
+      final snap = await collRef.get();
+      // Apply each document directly (docChanges may be empty for a plain get())
+      for (final doc in snap.docs) {
+        try {
+          await _applyRemoteDoc(doc);
+        } catch (e) {
+          debugPrint('SyncService: failed to apply remote doc ${doc.id}: $e');
+        }
+      }
+    } catch (e) {
+      _onFirestoreError(e);
+    }
   }
 
   void _onFirestoreError(Object e) {
@@ -157,22 +253,36 @@ class SyncService {
 
   Future<void> _handleLocalPut(Medicine medicine) async {
     try {
+      debugPrint(
+        'SyncService._handleLocalPut: id=${medicine.id} uid=$_uid imageBytes=${medicine.imageBytes != null} cloudinaryId=${medicine.cloudinaryPublicId}',
+      );
+
       // If there's image bytes but no cloudinaryPublicId, upload image first
       if (medicine.imageBytes != null &&
           (medicine.cloudinaryPublicId == null ||
               medicine.cloudinaryPublicId!.isEmpty)) {
-        debugPrint('SyncService: uploading image for medicine ${medicine.id}');
-        final filename = '${medicine.id}.jpg';
-        final res = await CloudinaryService.uploadImageBytes(
-          medicine.imageBytes!,
-          filename,
-        );
-        debugPrint('SyncService: upload result $res');
-        medicine.imageUrl = res['secure_url'];
-        medicine.cloudinaryPublicId = res['public_id'];
-        medicine.lastModifiedMillis = DateTime.now().millisecondsSinceEpoch;
-        _updatingFromHive.add(medicine.id);
-        await medicine.save();
+        try {
+          debugPrint(
+            'SyncService: uploading image for medicine ${medicine.id}',
+          );
+          final filename = '${medicine.id}.jpg';
+          final res = await CloudinaryService.uploadImageBytes(
+            medicine.imageBytes!,
+            filename,
+          );
+          debugPrint('SyncService: upload result $res');
+          medicine.imageUrl = res['secure_url'];
+          medicine.cloudinaryPublicId = res['public_id'];
+          medicine.lastModifiedMillis = DateTime.now().millisecondsSinceEpoch;
+          _updatingFromHive.add(medicine.id);
+          await medicine.save();
+        } catch (uploadErr, st) {
+          debugPrint(
+            'SyncService: image upload failed for ${medicine.id}: $uploadErr',
+          );
+          debugPrintStack(stackTrace: st);
+          // don't rethrow; we'll retry later via timer
+        }
       }
 
       // Write to Firestore
@@ -205,8 +315,9 @@ class SyncService {
       debugPrint('SyncService: writing medicine ${medicine.id} to firestore');
       _updatingFromHive.add(medicine.id);
       await docRef.set(data, SetOptions(merge: true));
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('SyncService._handleLocalPut error: $e');
+      debugPrintStack(stackTrace: st);
     }
   }
 
@@ -309,5 +420,50 @@ class SyncService {
       await _medicineBox?.put(id, newMed);
       _lastKnown[id] = newMed;
     }
+  }
+
+  Future<void> _applyRemoteDoc(QueryDocumentSnapshot doc) async {
+    final id = doc.id;
+    final data = doc.data() as Map<String, dynamic>?;
+    if (data == null) return;
+
+    final remoteLast = (data['lastModifiedMillis'] as int?) ?? 0;
+    final local = _medicineBox?.get(id);
+    final localLast = local?.lastModifiedMillis ?? 0;
+    if (local != null && localLast >= remoteLast) {
+      // local is newer or equal, skip applying remote
+      return;
+    }
+
+    final newMed = Medicine(
+      id: data['id'] as String? ?? id,
+      name: data['name'] as String? ?? '',
+      totalQty: (data['totalQty'] as int?) ?? 0,
+      buyPrice: (data['buyPrice'] as int?) ?? 0,
+      sellPrice: (data['sellPrice'] as int?) ?? 0,
+      imageBytes: null,
+      soldQty: (data['soldQty'] as int?) ?? 0,
+      category: data['category'] as String? ?? 'Others',
+      barcode: data['barcode'] as String?,
+    );
+
+    newMed.imageUrl = data['imageUrl'] as String?;
+    newMed.cloudinaryPublicId = data['cloudinaryPublicId'] as String?;
+    newMed.lastModifiedMillis = remoteLast > 0
+        ? remoteLast
+        : DateTime.now().millisecondsSinceEpoch;
+
+    if (newMed.imageUrl != null && newMed.imageUrl!.isNotEmpty) {
+      try {
+        final bytes = await compute(_fetchImageBytes, newMed.imageUrl!);
+        if (bytes != null) newMed.imageBytes = bytes;
+      } catch (e) {
+        debugPrint('Failed to download image for $id: $e');
+      }
+    }
+
+    _updatingFromFirestore.add(id);
+    await _medicineBox?.put(id, newMed);
+    _lastKnown[id] = newMed;
   }
 }

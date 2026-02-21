@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -70,6 +71,14 @@ class _SplashScreenState extends State<SplashScreen>
       try {
         await FirebaseAuth.instance.signOut();
       } catch (_) {}
+      // If Firebase auth check failed (likely offline), check for locally
+      // stored account credentials and allow offline routing to home.
+      try {
+        final box = await Hive.openBox('accounts');
+        if (box.isNotEmpty) return true;
+      } catch (boxErr) {
+        debugPrint('Splash: failed opening accounts box: $boxErr');
+      }
       return false;
     }
   }

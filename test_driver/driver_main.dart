@@ -14,6 +14,7 @@ void main() async {
   Hive.registerAdapter(ReportAdapter());
 
   final settingsBox = await Hive.openBox('settings');
-
-  runApp(app.MyApp(settingsBox: settingsBox));
+  final navigatorKey = GlobalKey<NavigatorState>();
+  // provide navigatorKey to app so tests and notification routing have a navigator
+  runApp(app.MyApp(settingsBox: settingsBox, navigatorKey: navigatorKey));
 }

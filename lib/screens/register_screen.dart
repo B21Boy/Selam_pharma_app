@@ -3,6 +3,7 @@ import 'dart:async';
 import '../utils/ui_helpers.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/services.dart';
+import '../services/local_auth.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import 'home_screen.dart';
@@ -95,6 +96,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
         };
         await FirestoreService.set('users/$uid', profile);
         debugPrint('Created Firestore profile for user $uid');
+        // Persist account locally for offline sign-in convenience.
+        try {
+          await LocalAuth.saveAccount(
+            email: _emailCtrl.text.trim(),
+            username: _usernameCtrl.text.trim(),
+            password: _passCtrl.text,
+          );
+          debugPrint('Saved account to Hive for offline login');
+        } catch (localErr) {
+          debugPrint('Failed to save local account: $localErr');
+        }
       } catch (e) {
         debugPrint('Failed to create Firestore user profile: $e');
       }
@@ -361,7 +373,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
-                                    'Sign In',
+                                    'Register',
                                     style: TextStyle(
                                       color: cs.onPrimary,
                                       fontWeight: FontWeight.w600,

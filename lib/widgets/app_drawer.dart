@@ -3,8 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/pharmacy_provider.dart';
-import '../screens/report_screen.dart';
 import '../screens/contact_screen.dart';
+import '../screens/trash_screen.dart';
+import '../screens/notification_screen.dart';
 import '../screens/settings_screen.dart';
 
 class AppDrawer extends StatefulWidget {
@@ -230,10 +231,12 @@ class _AppDrawerState extends State<AppDrawer>
                               )
                             : null,
                         onTap: () {
-                          Navigator.of(context).pop();
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => ReportScreen()),
+                          final nav = Navigator.of(context);
+                          nav.pop();
+                          nav.push(
+                            MaterialPageRoute(
+                              builder: (_) => const NotificationScreen(),
+                            ),
                           );
                         },
                         contentPadding: const EdgeInsets.symmetric(
@@ -253,21 +256,85 @@ class _AppDrawerState extends State<AppDrawer>
                         onTap:
                             widget.onContact ??
                             () {
-                              Navigator.of(context).pop();
-                              Navigator.of(context).push(
+                              final nav = Navigator.of(context);
+                              nav.pop();
+                              nav.push(
                                 MaterialPageRoute(
                                   builder: (_) => const ContactScreen(),
                                 ),
                               );
                             },
                       ),
-                      _buildItem(
-                        context,
-                        icon: Icons.delete_outline,
-                        title: 'Trash',
-                        subtitle: 'Recently deleted items',
-                        onTap:
-                            widget.onTrash ?? () => Navigator.of(context).pop(),
+                      // Trash item with expiring-badge
+                      Builder(
+                        builder: (ctx) {
+                          final prov = ctx.watch<PharmacyProvider?>();
+                          final expiring =
+                              prov?.trashedExpiringWithin(days: 2) ?? 0;
+                          return ListTile(
+                            leading: Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                color: theme.primaryColor.withAlpha(
+                                  (0.06 * 255).round(),
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(
+                                Icons.delete_outline,
+                                color: theme.primaryColor,
+                              ),
+                            ),
+                            title: Text(
+                              'Trash',
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: Text(
+                              'Recently deleted items',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16.0,
+                              vertical: 12.0,
+                            ),
+                            onTap:
+                                widget.onTrash ??
+                                () {
+                                  final nav = Navigator.of(context);
+                                  nav.pop();
+                                  nav.push(
+                                    MaterialPageRoute(
+                                      builder: (_) => const TrashScreen(),
+                                    ),
+                                  );
+                                },
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            trailing: expiring > 0
+                                ? Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      '$expiring',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  )
+                                : null,
+                          );
+                        },
                       ),
                       _buildItem(
                         context,
@@ -290,8 +357,9 @@ class _AppDrawerState extends State<AppDrawer>
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
                     onTap: () {
-                      Navigator.of(context).pop();
-                      Navigator.of(context).push(
+                      final nav = Navigator.of(context);
+                      nav.pop();
+                      nav.push(
                         MaterialPageRoute(
                           builder: (_) => const SettingsScreen(),
                         ),

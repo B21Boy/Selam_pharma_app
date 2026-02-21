@@ -10,9 +10,10 @@ import 'report_screen.dart';
 import 'audit_screen.dart';
 import 'chat_screen.dart';
 import 'contact_screen.dart';
+import 'trash_screen.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
-import '../utils/ui_helpers.dart';
+// removed unused import
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -100,7 +101,10 @@ class HomeScreenState extends State<HomeScreen> {
         },
         onTrash: () {
           Navigator.of(context).pop();
-          showAppSnackBar(context, 'Trash view not implemented yet');
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const TrashScreen()),
+          );
         },
         onHelp: () {
           Navigator.of(context).pop();

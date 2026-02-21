@@ -16,9 +16,63 @@ class _ContactScreenState extends State<ContactScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController(text: 'Deksiyos Yismaw');
   final _emailCtrl = TextEditingController(text: 'deksiman721@gmail.com');
-  final _phoneCtrl = TextEditingController(text: '0960625242');
+  final _phoneCtrl = TextEditingController(text: '+251960625242');
   final _msgCtrl = TextEditingController();
   bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _showContactDialog();
+    });
+  }
+
+  void _showContactDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Contact Information'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Phone No: +251960625242'),
+              SizedBox(height: 8),
+              Text('Email: deksiman721@gmail.com'),
+              SizedBox(height: 8),
+              Text('Telegram: @Dekxaaa'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.of(context).pop();
+                final email = 'mailto:deksiman721@gmail.com';
+                if (await canLaunchUrlString(email)) {
+                  await launchUrlString(email);
+                } else {
+                  if (mounted) {
+                    showAppSnackBar(
+                      context,
+                      'Unable to open email app',
+                      error: true,
+                    );
+                  }
+                }
+              },
+              child: const Text('Contact via Email'),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   Future<void> _send() async {
     if (!_formKey.currentState!.validate()) return;

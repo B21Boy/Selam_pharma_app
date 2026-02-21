@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import '../utils/ui_helpers.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/local_auth.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import 'home_screen.dart';
@@ -187,6 +188,29 @@ class _LoginScreenState extends State<LoginScreen> {
           (route) => false,
         );
         return;
+      }
+
+      // Offline fallback: verify against locally stored credentials (Hive)
+      try {
+        final ok = await LocalAuth.verifyCredentials(
+          _emailCtrl.text.trim(),
+          _passCtrl.text,
+        );
+        if (ok) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Signed in offline as ${_emailCtrl.text.trim()}'),
+            ),
+          );
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => HomeScreen()),
+            (route) => false,
+          );
+          return;
+        }
+      } catch (localErr) {
+        debugPrint('Offline credential check failed: $localErr');
       }
 
       // Specific guidance for pigeon/type cast errors (common plugin mismatch symptom)
@@ -419,7 +443,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 onPressed: () =>
                                     Navigator.pushNamed(context, '/register'),
                                 child: Text(
-                                  'Sign In',
+                                  'Register',
                                   style: TextStyle(
                                     color: cs.onSurface.withValues(alpha: 0.7),
                                     fontWeight: FontWeight.w600,

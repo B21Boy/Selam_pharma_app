@@ -2,7 +2,11 @@
 // TODO: migrate RadioListTile usage to RadioGroup when updating Flutter SDK.
 // ignore_for_file: deprecated_member_use, use_build_context_synchronously
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
+import '../providers/pharmacy_provider.dart';
 import '../utils/ui_helpers.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -18,6 +22,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _notificationsEnabled = true;
   bool _badgeEnabled = true;
   bool _biometricEnabled = false;
+  bool _trashNotificationsEnabled = true;
+
+  Box? _settingsBox;
+
+  @override
+  void initState() {
+    super.initState();
+    try {
+      _settingsBox = Hive.box('settings');
+      _trashNotificationsEnabled =
+          _settingsBox?.get(
+            'trash_notifications_enabled',
+            defaultValue: true,
+          ) ??
+          true;
+    } catch (_) {
+      _trashNotificationsEnabled = true;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +114,74 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     value: _badgeEnabled,
                     onChanged: (v) => setState(() => _badgeEnabled = v),
                     title: const Text('Show badges'),
+                  ),
+                  SwitchListTile(
+                    value: _trashNotificationsEnabled,
+                    onChanged: (v) async {
+                      setState(() => _trashNotificationsEnabled = v);
+                      // persist
+                      try {
+                        _settingsBox?.put('trash_notifications_enabled', v);
+                      } catch (_) {}
+                      // if disabling, cancel scheduled notifications for trashed items
+                      final prov = Provider.of<PharmacyProvider>(
+                        context,
+                        listen: false,
+                      );
+                      if (!v) {
+                        for (final med in prov.trashedMedicines) {
+                          await NotificationService.instance.cancelFor(med.id);
+                        }
+                      } else {
+                        // schedule notifications for existing trashed items
+                        for (final med in prov.trashedMedicines) {
+                          final deletedAt = med.deletedAtMillis != null
+                              ? DateTime.fromMillisecondsSinceEpoch(
+                                  med.deletedAtMillis!,
+                                )
+                              : DateTime.now();
+                          final expireAt = deletedAt.add(
+                            Duration(days: prov.trashRetentionDays),
+                          );
+                          final twoDays = expireAt.subtract(
+                            const Duration(days: 2),
+                          );
+                          final oneDay = expireAt.subtract(
+                            const Duration(days: 1),
+                          );
+                          try {
+                            await NotificationService.instance.schedule(
+                              notifId: med.id,
+                              offset: 0,
+                              title: 'Expiring soon',
+                              body:
+                                  '${med.name} will be permanently deleted in 2 days.',
+                              at: twoDays,
+                            );
+                            await NotificationService.instance.schedule(
+                              notifId: med.id,
+                              offset: 1,
+                              title: 'Expiring soon',
+                              body:
+                                  '${med.name} will be permanently deleted in 1 day.',
+                              at: oneDay,
+                            );
+                            await NotificationService.instance.schedule(
+                              notifId: med.id,
+                              offset: 2,
+                              title: 'Deleted',
+                              body:
+                                  '${med.name} has been permanently deleted from Trash.',
+                              at: expireAt,
+                            );
+                          } catch (_) {}
+                        }
+                      }
+                    },
+                    title: const Text('Trash expiry notifications'),
+                    subtitle: const Text(
+                      'Notify when trashed items are about to be permanently deleted',
+                    ),
                   ),
                 ],
               ),

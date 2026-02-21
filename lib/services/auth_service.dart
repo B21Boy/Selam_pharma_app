@@ -158,7 +158,7 @@ class AuthService {
       if (e.code == 'account-exists-with-different-credential') {
         _pendingCredential = credential;
         throw AccountExistsWithDifferentCredential(
-          googleUser.email ?? '',
+          googleUser.email,
           e.message ?? '',
         );
       }

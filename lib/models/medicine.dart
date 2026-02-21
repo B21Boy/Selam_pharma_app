@@ -40,6 +40,9 @@ class Medicine extends HiveObject {
   @HiveField(11)
   int? lastModifiedMillis;
 
+  @HiveField(12)
+  int? deletedAtMillis;
+
   Medicine({
     required this.id,
     required this.name,
@@ -50,6 +53,10 @@ class Medicine extends HiveObject {
     this.soldQty = 0,
     this.category = 'Others',
     this.barcode,
+    this.imageUrl,
+    this.cloudinaryPublicId,
+    this.lastModifiedMillis,
+    this.deletedAtMillis,
   });
 
   int get remainingQty => totalQty - soldQty;

@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/medicine.dart';
+import '../services/notification_service.dart';
 import '../models/report.dart';
 import '../services/ai_service.dart';
 
 class PharmacyProvider extends ChangeNotifier {
   Box<Medicine>? _medicineBox;
+  Box<Medicine>? _trashBox;
   Box<Report>? _reportBox;
   StreamSubscription<User?>? _authSub;
 
@@ -66,15 +68,175 @@ class PharmacyProvider extends ChangeNotifier {
   }
 
   Future<void> deleteMedicine(Medicine medicine) async {
-    // Delete all reports for this medicine
+    // Soft-delete: move medicine to trash box instead of permanent delete.
+    if (_trashBox == null || !(_trashBox?.isOpen ?? false)) {
+      final boxName = _medicineBox?.name != null
+          ? '${_medicineBox!.name}_trash'
+          : 'medicines_trash';
+      _trashBox = await Hive.openBox<Medicine>(boxName);
+    }
+
+    // Remove associated reports to avoid orphaned references.
     final reportsToDelete = _reports
         .where((report) => report.medicineName == medicine.name)
         .toList();
     for (final report in reportsToDelete) {
       await report.delete();
     }
+
+    // Mark deletion time and move a cloned medicine to trash
+    int? deletedAtMillis;
+    try {
+      deletedAtMillis = DateTime.now().millisecondsSinceEpoch;
+      final clone = Medicine(
+        id: medicine.id,
+        name: medicine.name,
+        totalQty: medicine.totalQty,
+        buyPrice: medicine.buyPrice,
+        sellPrice: medicine.sellPrice,
+        imageBytes: medicine.imageBytes,
+        soldQty: medicine.soldQty,
+        category: medicine.category,
+        barcode: medicine.barcode,
+        imageUrl: medicine.imageUrl,
+        cloudinaryPublicId: medicine.cloudinaryPublicId,
+        lastModifiedMillis: medicine.lastModifiedMillis,
+        deletedAtMillis: deletedAtMillis,
+      );
+      await _trashBox?.put(clone.id, clone);
+    } catch (_) {}
     await medicine.delete();
     await loadData();
+    // schedule notifications: 2 days left, 1 day left, and final deletion notice
+    try {
+      if (deletedAtMillis != null) {
+        final deletedAt = DateTime.fromMillisecondsSinceEpoch(deletedAtMillis);
+        final expireAt = deletedAt.add(Duration(days: trashRetentionDays));
+        final twoDays = expireAt.subtract(const Duration(days: 2));
+        final oneDay = expireAt.subtract(const Duration(days: 1));
+        final finalAt = expireAt;
+        await NotificationService.instance.showImmediate(
+          id: medicine.id.hashCode & 0x7fffffff,
+          title: 'Moved to Trash',
+          body:
+              '${medicine.name} moved to Trash. It will be deleted in $trashRetentionDays days.',
+        );
+        await NotificationService.instance.schedule(
+          notifId: medicine.id,
+          offset: 0,
+          title: 'Expiring soon',
+          body: '${medicine.name} will be permanently deleted in 2 days.',
+          at: twoDays,
+          payload: 'trash:${medicine.id}',
+        );
+        await NotificationService.instance.schedule(
+          notifId: medicine.id,
+          offset: 1,
+          title: 'Expiring soon',
+          body: '${medicine.name} will be permanently deleted in 1 day.',
+          at: oneDay,
+          payload: 'trash:${medicine.id}',
+        );
+        await NotificationService.instance.schedule(
+          notifId: medicine.id,
+          offset: 2,
+          title: 'Deleted',
+          body: '${medicine.name} has been permanently deleted from Trash.',
+          at: finalAt,
+          payload: 'trash:${medicine.id}',
+        );
+      }
+    } catch (_) {}
+  }
+
+  /// Returns list of medicines currently in trash.
+  List<Medicine> get trashedMedicines => _trashBox?.values.toList() ?? [];
+
+  Future<void> restoreMedicineFromTrash(String id) async {
+    if (_trashBox == null || !(_trashBox?.isOpen ?? false)) return;
+    final med = _trashBox?.get(id);
+    if (med == null) return;
+    // create a fresh copy for the main medicines box
+    final restored = Medicine(
+      id: med.id,
+      name: med.name,
+      totalQty: med.totalQty,
+      buyPrice: med.buyPrice,
+      sellPrice: med.sellPrice,
+      imageBytes: med.imageBytes,
+      soldQty: med.soldQty,
+      category: med.category,
+      barcode: med.barcode,
+      imageUrl: med.imageUrl,
+      cloudinaryPublicId: med.cloudinaryPublicId,
+      lastModifiedMillis: med.lastModifiedMillis,
+      deletedAtMillis: null,
+    );
+    await _medicineBox?.put(restored.id, restored);
+    await _trashBox?.delete(id);
+    await loadData();
+    // cancel any scheduled notifications for this medicine
+    try {
+      await NotificationService.instance.cancelFor(id);
+    } catch (_) {}
+  }
+
+  Future<void> permanentlyDeleteFromTrash(String id) async {
+    if (_trashBox == null || !(_trashBox?.isOpen ?? false)) return;
+    final med = _trashBox?.get(id);
+    if (med == null) return;
+    // If the medicine had uploaded image/cloudinary id, callers may want to delete it.
+    await _trashBox?.delete(id);
+    await loadData();
+    // cancel scheduled notifications for permanently deleted item
+    try {
+      await NotificationService.instance.cancelFor(id);
+    } catch (_) {}
+  }
+
+  /// Number of days items are kept in trash before permanent deletion.
+  int get trashRetentionDays => 7;
+
+  /// Returns days left before permanent deletion for a trashed medicine.
+  int daysLeftInTrash(Medicine med) {
+    final deleted = med.deletedAtMillis;
+    if (deleted == null) return trashRetentionDays;
+    final deletedAt = DateTime.fromMillisecondsSinceEpoch(deleted);
+    final expireAt = deletedAt.add(Duration(days: trashRetentionDays));
+    final diff = expireAt.difference(DateTime.now()).inDays;
+    return diff < 0 ? 0 : diff;
+  }
+
+  /// Count of trashed items that will expire within given days (default 2 days).
+  int trashedExpiringWithin({int days = 2}) {
+    final now = DateTime.now();
+    if (_trashBox == null || !(_trashBox?.isOpen ?? false)) return 0;
+    return _trashBox!.values.where((med) {
+      final deleted = med.deletedAtMillis;
+      if (deleted == null) return false;
+      final deletedAt = DateTime.fromMillisecondsSinceEpoch(deleted);
+      final expireAt = deletedAt.add(Duration(days: trashRetentionDays));
+      final diff = expireAt.difference(now).inDays;
+      return diff <= days;
+    }).length;
+  }
+
+  Future<void> _cleanupTrash() async {
+    if (_trashBox == null || !(_trashBox?.isOpen ?? false)) return;
+    final now = DateTime.now();
+    final toRemove = <String>[];
+    for (final med in _trashBox!.values) {
+      final deleted = med.deletedAtMillis;
+      if (deleted == null) continue;
+      final deletedAt = DateTime.fromMillisecondsSinceEpoch(deleted);
+      if (now.difference(deletedAt).inDays >= trashRetentionDays) {
+        toRemove.add(med.id);
+      }
+    }
+    for (final id in toRemove) {
+      await _trashBox?.delete(id);
+    }
+    if (toRemove.isNotEmpty) await loadData();
   }
 
   Future<void> addReport(Report report) async {
@@ -118,6 +280,12 @@ class PharmacyProvider extends ChangeNotifier {
 
     _medicineBox = await Hive.openBox<Medicine>(medsName);
     _reportBox = await Hive.openBox<Report>(reportsName);
+    // open a per-user trash box for soft-deleted medicines
+    final trashName = uid == null
+        ? 'medicines_trash_guest'
+        : 'medicines_trash_$uid';
+    _trashBox = await Hive.openBox<Medicine>(trashName);
+    await _cleanupTrash();
     await loadData();
   }
 
@@ -127,6 +295,7 @@ class PharmacyProvider extends ChangeNotifier {
     try {
       _medicineBox?.close();
       _reportBox?.close();
+      _trashBox?.close();
     } catch (_) {}
     super.dispose();
   }

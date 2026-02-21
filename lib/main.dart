@@ -15,6 +15,7 @@ import 'screens/register_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/auth_service.dart';
+import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 import 'utils/ui_helpers.dart';
 
@@ -45,15 +46,37 @@ void main() async {
   }
 
   final settingsBox = await Hive.openBox('settings');
+  // initialize notifications early
+  try {
+    await NotificationService.instance.initialize();
+  } catch (e) {
+    debugPrint('NotificationService init failed: $e');
+  }
 
-  runApp(MyApp(settingsBox: settingsBox, syncService: syncService));
+  final navigatorKey = GlobalKey<NavigatorState>();
+  // provide navigatorKey to NotificationService so notification taps can navigate
+  NotificationService.instance.navigatorKey = navigatorKey;
+
+  runApp(
+    MyApp(
+      settingsBox: settingsBox,
+      syncService: syncService,
+      navigatorKey: navigatorKey,
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
   final Box settingsBox;
   final SyncService? syncService;
+  final GlobalKey<NavigatorState> navigatorKey;
 
-  const MyApp({super.key, required this.settingsBox, this.syncService});
+  const MyApp({
+    super.key,
+    required this.settingsBox,
+    this.syncService,
+    required this.navigatorKey,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -71,10 +94,12 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'Drugo',
+            navigatorKey: navigatorKey,
             theme: AppTheme.light(),
             darkTheme: AppTheme.dark(),
             themeMode: themeProvider.themeMode,
             routes: {
+              '/home': (_) => HomeScreen(),
               '/login': (_) => LoginScreen(),
               '/register': (_) => RegisterScreen(),
               '/forgot': (_) => ForgotPasswordScreen(),
