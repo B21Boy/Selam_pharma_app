@@ -118,20 +118,18 @@ class HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            
-
-            SizedBox(width: 8),
-            ShaderMask(
-              shaderCallback: (bounds) => LinearGradient(
-                colors: [Colors.white, Colors.green],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ).createShader(bounds),
-              child: Text(
-                'Pharmacy Manager',
-                style: TextStyle(
-                  color: Colors.white, // This will be overridden by the shader
-                ),
+            Icon(
+              Icons.local_pharmacy,
+              size: 44,
+              color: Colors.white,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Pharmacy Manager',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w600,
+                fontSize: 20,
               ),
             ),
           ],

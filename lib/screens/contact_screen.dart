@@ -14,11 +14,19 @@ class ContactScreen extends StatefulWidget {
 
 class _ContactScreenState extends State<ContactScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameCtrl = TextEditingController(text: 'Deksiyos Yismaw');
-  final _emailCtrl = TextEditingController(text: 'deksiman721@gmail.com');
-  final _phoneCtrl = TextEditingController(text: '+251960625242');
+  final _nameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
   final _msgCtrl = TextEditingController();
   bool _loading = false;
+
+  InputDecoration _fieldDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+    );
+  }
 
   @override
   void initState() {
@@ -140,7 +148,14 @@ class _ContactScreenState extends State<ContactScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Contact Support')),
+      appBar: AppBar(
+        title: const Text('Contact Support'),
+        titleSpacing: 20,
+        bottom: const PreferredSize(
+          preferredSize: Size.fromHeight(12),
+          child: SizedBox(height: 12),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
@@ -150,14 +165,14 @@ class _ContactScreenState extends State<ContactScreen> {
               children: [
                 TextFormField(
                   controller: _nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Name'),
+                  decoration: _fieldDecoration('Name'),
                   textInputAction: TextInputAction.next,
                   validator: (v) => v!.trim().isEmpty ? 'Enter name' : null,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _emailCtrl,
-                  decoration: const InputDecoration(labelText: 'Email'),
+                  decoration: _fieldDecoration('Email'),
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
                   validator: (v) =>
@@ -166,14 +181,14 @@ class _ContactScreenState extends State<ContactScreen> {
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _phoneCtrl,
-                  decoration: const InputDecoration(labelText: 'Phone'),
+                  decoration: _fieldDecoration('Phone'),
                   keyboardType: TextInputType.phone,
                   textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
                   controller: _msgCtrl,
-                  decoration: const InputDecoration(labelText: 'Message'),
+                  decoration: _fieldDecoration('Message'),
                   maxLines: 6,
                   validator: (v) => v!.trim().isEmpty ? 'Enter message' : null,
                 ),

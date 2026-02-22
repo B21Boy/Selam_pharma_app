@@ -2,6 +2,9 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+import 'package:hive/hive.dart';
 import '../providers/pharmacy_provider.dart';
 import '../screens/contact_screen.dart';
 import '../screens/trash_screen.dart';
@@ -46,12 +49,36 @@ class _AppDrawerState extends State<AppDrawer>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
     WidgetsBinding.instance.addPostFrameCallback((_) => _ctrl.forward());
+    // load persisted avatar path if available
+    try {
+      _settingsBox = Hive.box('settings');
+    } catch (_) {
+      _settingsBox = null;
+    }
   }
 
   @override
   void dispose() {
     _ctrl.dispose();
     super.dispose();
+  }
+
+  Box? _settingsBox;
+
+  Future<void> _pickAvatar() async {
+    try {
+      final picker = ImagePicker();
+      final xfile = await picker.pickImage(source: ImageSource.gallery);
+      if (xfile == null) return;
+      final path = xfile.path;
+      // persist
+      try {
+        _settingsBox?.put('drawerAvatarPath', path);
+      } catch (_) {}
+      setState(() {});
+    } catch (e) {
+      // ignore errors silently
+    }
   }
 
   Widget _buildItem(
@@ -135,35 +162,59 @@ class _AppDrawerState extends State<AppDrawer>
                           clipBehavior: Clip.none,
                           children: [
                             Positioned.fill(
-                              child: CircleAvatar(
-                                radius: 28,
-                                backgroundColor: Colors.white,
-                                child: Icon(
-                                  Icons.local_pharmacy,
-                                  color: theme.primaryColor,
-                                  size: 30,
-                                ),
+                              child: Builder(
+                                builder: (ctx) {
+                                  String? avatarPath;
+                                  try {
+                                    avatarPath = Hive.box(
+                                      'settings',
+                                    ).get('drawerAvatarPath');
+                                  } catch (_) {
+                                    avatarPath = null;
+                                  }
+                                  if (avatarPath != null &&
+                                      File(avatarPath).existsSync()) {
+                                    return CircleAvatar(
+                                      radius: 28,
+                                      backgroundColor: Colors.white,
+                                      backgroundImage: FileImage(
+                                        File(avatarPath),
+                                      ),
+                                    );
+                                  }
+                                  return CircleAvatar(
+                                    radius: 28,
+                                    backgroundColor: Colors.white,
+                                    child: Icon(
+                                      Icons.local_pharmacy,
+                                      color: theme.primaryColor,
+                                      size: 30,
+                                    ),
+                                  );
+                                },
                               ),
                             ),
-                            // small plus badge overlapping the avatar at bottom-right
                             Positioned(
                               bottom: -2,
                               right: -2,
-                              child: Container(
-                                width: 20,
-                                height: 20,
-                                decoration: BoxDecoration(
-                                  color: theme.primaryColor,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white,
-                                    width: 2,
+                              child: GestureDetector(
+                                onTap: _pickAvatar,
+                                child: Container(
+                                  width: 20,
+                                  height: 20,
+                                  decoration: BoxDecoration(
+                                    color: theme.primaryColor,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 2,
+                                    ),
                                   ),
-                                ),
-                                child: const Icon(
-                                  Icons.add,
-                                  size: 12,
-                                  color: Colors.white,
+                                  child: const Icon(
+                                    Icons.add,
+                                    size: 12,
+                                    color: Colors.white,
+                                  ),
                                 ),
                               ),
                             ),
@@ -193,7 +244,6 @@ class _AppDrawerState extends State<AppDrawer>
                           ],
                         ),
                       ),
-                      // inline close button aligned vertically with header content
                       IconButton(
                         icon: Icon(Icons.close, color: Colors.white70),
                         tooltip: 'Close',
@@ -204,7 +254,6 @@ class _AppDrawerState extends State<AppDrawer>
                   ),
                 ),
 
-                // Drawer items
                 Expanded(
                   child: ListView(
                     padding: EdgeInsets.zero,
@@ -219,7 +268,6 @@ class _AppDrawerState extends State<AppDrawer>
                             () => Navigator.of(context).pop(),
                       ),
 
-                      // Notifications summary (moved between Register and Contact)
                       ListTile(
                         leading: Container(
                           width: 48,
@@ -299,7 +347,7 @@ class _AppDrawerState extends State<AppDrawer>
                               );
                             },
                       ),
-                      // Trash item with expiring-badge
+
                       Builder(
                         builder: (ctx) {
                           final prov = ctx.watch<PharmacyProvider?>();
@@ -370,6 +418,7 @@ class _AppDrawerState extends State<AppDrawer>
                           );
                         },
                       ),
+
                       _buildItem(
                         context,
                         icon: Icons.help_outline,
@@ -391,7 +440,6 @@ class _AppDrawerState extends State<AppDrawer>
                   ),
                 ),
 
-                // Footer - Settings navigation
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16.0,
