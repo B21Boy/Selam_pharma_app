@@ -14,6 +14,7 @@ import 'trash_screen.dart';
 import '../widgets/app_drawer.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 // removed unused import
+import 'help_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -108,17 +109,17 @@ class HomeScreenState extends State<HomeScreen> {
         },
         onHelp: () {
           Navigator.of(context).pop();
-          showAboutDialog(
-            context: context,
-            applicationName: 'Pharmacy Manager',
-            children: [Text('Help and documentation can be added here.')],
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const HelpScreen()),
           );
         },
       ),
       appBar: AppBar(
         title: Row(
           children: [
-            Image.asset('assets/image/logo.png', height: 82),
+            
+
             SizedBox(width: 8),
             ShaderMask(
               shaderCallback: (bounds) => LinearGradient(

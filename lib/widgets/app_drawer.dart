@@ -7,6 +7,7 @@ import '../screens/contact_screen.dart';
 import '../screens/trash_screen.dart';
 import '../screens/notification_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/help_screen.dart';
 
 class AppDrawer extends StatefulWidget {
   final void Function()? onRegister;
@@ -127,13 +128,46 @@ class _AppDrawerState extends State<AppDrawer>
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: Colors.white,
-                        child: Icon(
-                          Icons.local_pharmacy,
-                          color: theme.primaryColor,
-                          size: 30,
+                      SizedBox(
+                        width: 56,
+                        height: 56,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Positioned.fill(
+                              child: CircleAvatar(
+                                radius: 28,
+                                backgroundColor: Colors.white,
+                                child: Icon(
+                                  Icons.local_pharmacy,
+                                  color: theme.primaryColor,
+                                  size: 30,
+                                ),
+                              ),
+                            ),
+                            // small plus badge overlapping the avatar at bottom-right
+                            Positioned(
+                              bottom: -2,
+                              right: -2,
+                              child: Container(
+                                width: 20,
+                                height: 20,
+                                decoration: BoxDecoration(
+                                  color: theme.primaryColor,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.add,
+                                  size: 12,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -342,7 +376,16 @@ class _AppDrawerState extends State<AppDrawer>
                         title: 'Help',
                         subtitle: 'App help & docs',
                         onTap:
-                            widget.onHelp ?? () => Navigator.of(context).pop(),
+                            widget.onHelp ??
+                            () {
+                              final nav = Navigator.of(context);
+                              nav.pop();
+                              nav.push(
+                                MaterialPageRoute(
+                                  builder: (_) => const HelpScreen(),
+                                ),
+                              );
+                            },
                       ),
                     ],
                   ),
