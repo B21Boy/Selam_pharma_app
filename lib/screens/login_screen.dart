@@ -156,6 +156,20 @@ class _LoginScreenState extends State<LoginScreen> {
               duration: const Duration(seconds: 3),
             ),
           );
+
+          // Persist account locally for offline sign-in convenience.
+          try {
+            final username = u.displayName ?? _emailCtrl.text.split('@').first;
+            await LocalAuth.saveAccount(
+              email: _emailCtrl.text.trim(),
+              username: username,
+              password: _passCtrl.text,
+            );
+            debugPrint('Saved account to Hive for offline login');
+          } catch (localErr) {
+            debugPrint('Failed to save local account after sign-in: $localErr');
+          }
+
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => HomeScreen()),
             (route) => false,

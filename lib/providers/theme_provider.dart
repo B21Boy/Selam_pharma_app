@@ -18,4 +18,12 @@ class ThemeProvider extends ChangeNotifier {
     _settingsBox.put('isDarkMode', _isDarkMode);
     notifyListeners();
   }
+
+  /// Explicitly set dark mode on or off.
+  void setDark(bool isDark) {
+    if (_isDarkMode == isDark) return;
+    _isDarkMode = isDark;
+    _settingsBox.put('isDarkMode', _isDarkMode);
+    notifyListeners();
+  }
 }

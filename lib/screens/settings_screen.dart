@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import '../services/notification_service.dart';
 import '../providers/pharmacy_provider.dart';
+import '../providers/theme_provider.dart';
 import '../utils/ui_helpers.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -18,7 +19,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   // Local state for toggles (no persistence in this minimal scaffold)
-  String _themeMode = 'system'; // 'system' | 'light' | 'dark'
   bool _notificationsEnabled = true;
   bool _badgeEnabled = true;
   bool _biometricEnabled = false;
@@ -67,26 +67,36 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               child: Column(
                 children: [
-                  RadioListTile<String>(
-                    value: 'system',
-                    groupValue: _themeMode,
-                    title: const Text('System'),
-                    onChanged: (v) =>
-                        setState(() => _themeMode = v ?? 'system'),
-                  ),
-                  RadioListTile<String>(
-                    value: 'light',
-                    groupValue: _themeMode,
-                    title: const Text('Light'),
-                    onChanged: (v) =>
-                        setState(() => _themeMode = v ?? 'system'),
-                  ),
-                  RadioListTile<String>(
-                    value: 'dark',
-                    groupValue: _themeMode,
-                    title: const Text('Dark'),
-                    onChanged: (v) =>
-                        setState(() => _themeMode = v ?? 'system'),
+                  // Only allow explicit Light or Dark selection (no System option)
+                  Builder(
+                    builder: (context) {
+                      final themeProvider = context.watch<ThemeProvider>();
+                      final groupValue = themeProvider.isDarkMode
+                          ? 'dark'
+                          : 'light';
+                      return Column(
+                        children: [
+                          RadioListTile<String>(
+                            value: 'light',
+                            groupValue: groupValue,
+                            title: const Text('Light'),
+                            onChanged: (v) {
+                              if (v == null) return;
+                              context.read<ThemeProvider>().setDark(false);
+                            },
+                          ),
+                          RadioListTile<String>(
+                            value: 'dark',
+                            groupValue: groupValue,
+                            title: const Text('Dark'),
+                            onChanged: (v) {
+                              if (v == null) return;
+                              context.read<ThemeProvider>().setDark(true);
+                            },
+                          ),
+                        ],
+                      );
+                    },
                   ),
                 ],
               ),
