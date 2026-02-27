@@ -118,18 +118,18 @@ class HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: Row(
           children: [
-            Icon(
-              Icons.local_pharmacy,
-              size: 44,
-              color: Colors.white,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Pharmacy Manager',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 20,
+            Icon(Icons.local_pharmacy, size: 32, color: Colors.white),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                'Pharmacy Manager',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
               ),
             ),
           ],
@@ -138,25 +138,28 @@ class HomeScreenState extends State<HomeScreen> {
           IconButton(
             icon: Icon(
               themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
+              size: 20,
             ),
             onPressed: () => themeProvider.toggleTheme(),
             tooltip: 'Toggle theme',
           ),
         ],
+        toolbarHeight: 56,
+        titleSpacing: 8,
       ),
       body: Column(
         children: [
           // Pharmacy-themed search bar
           Container(
-            margin: const EdgeInsets.all(16.0),
+            margin: const EdgeInsets.all(12.0),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                  offset: Offset(0, 4),
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 6,
+                  offset: Offset(0, 3),
                 ),
               ],
             ),
@@ -164,11 +167,15 @@ class HomeScreenState extends State<HomeScreen> {
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search medicines...',
-                hintStyle: TextStyle(color: Colors.grey[600]),
-                prefixIcon: Icon(Icons.search, color: Color(0xFF007BFF)),
+                hintStyle: TextStyle(color: Colors.grey[600], fontSize: 12),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: Color(0xFF007BFF),
+                  size: 20,
+                ),
                 suffixIcon: _searchController.text.isNotEmpty
                     ? IconButton(
-                        icon: Icon(Icons.clear, color: Colors.grey),
+                        icon: Icon(Icons.clear, color: Colors.grey, size: 20),
                         onPressed: () {
                           _searchController.clear();
                           _filterMedicines();
@@ -177,15 +184,15 @@ class HomeScreenState extends State<HomeScreen> {
                     : null,
                 border: InputBorder.none,
                 contentPadding: EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 16,
+                  horizontal: 12,
+                  vertical: 10,
                 ),
               ),
             ),
           ),
           // Category buttons
           Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            margin: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: _categories.map((category) {
@@ -199,8 +206,8 @@ class HomeScreenState extends State<HomeScreen> {
                       });
                     },
                     child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      margin: const EdgeInsets.symmetric(horizontal: 2.0),
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
                       decoration: BoxDecoration(
                         color: isSelected ? Color(0xFF007BFF) : Colors.white,
                         borderRadius: BorderRadius.circular(8.0),
@@ -214,7 +221,7 @@ class HomeScreenState extends State<HomeScreen> {
                             ? [
                                 BoxShadow(
                                   color: Color(0xFF007BFF).withAlpha(77),
-                                  blurRadius: 4,
+                                  blurRadius: 3,
                                   offset: Offset(0, 2),
                                 ),
                               ]
@@ -226,7 +233,7 @@ class HomeScreenState extends State<HomeScreen> {
                         style: TextStyle(
                           color: isSelected ? Colors.white : Colors.grey[700],
                           fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                          fontSize: 12,
                         ),
                       ),
                     ),
@@ -247,7 +254,7 @@ class HomeScreenState extends State<HomeScreen> {
                     '${_filteredMedicines.length} medicine${_filteredMedicines.length == 1 ? '' : 's'} available',
                     style: TextStyle(
                       color: Colors.grey[700],
-                      fontSize: 14,
+                      fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -262,23 +269,23 @@ class HomeScreenState extends State<HomeScreen> {
                       children: [
                         Icon(
                           Icons.inventory_2_outlined,
-                          size: 80,
+                          size: 56,
                           color: Colors.grey[400],
                         ),
-                        SizedBox(height: 16),
+                        SizedBox(height: 12),
                         Text(
                           'No medicines found',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 14,
                             color: Colors.grey[600],
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        SizedBox(height: 8),
+                        SizedBox(height: 6),
                         Text(
                           'Add your first medicine using the Register button',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 12,
                             color: Colors.grey[500],
                           ),
                           textAlign: TextAlign.center,
@@ -394,7 +401,7 @@ class HomeScreenState extends State<HomeScreen> {
                                             style: TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,
-                                              fontSize: 16,
+                                              fontSize: 12,
                                               shadows: [
                                                 Shadow(
                                                   color: Colors.black.withAlpha(

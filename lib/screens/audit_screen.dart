@@ -149,7 +149,7 @@ class _AuditScreenState extends State<AuditScreen> {
         ? Center(
             child: Text(
               'No reports available for $period.',
-              style: GoogleFonts.montserrat(fontSize: 16),
+              style: GoogleFonts.montserrat(fontSize: 12),
             ),
           )
         : SingleChildScrollView(
@@ -210,21 +210,22 @@ class _AuditScreenState extends State<AuditScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
                 // Export Button
                 ElevatedButton.icon(
                   onPressed: () => _exportData(filteredReports, period),
-                  icon: const Icon(Icons.download),
+                  icon: const Icon(Icons.download, size: 18),
                   label: Text(
                     'Export $period Data',
-                    style: GoogleFonts.montserrat(),
+                    style: GoogleFonts.montserrat(fontSize: 12),
                   ),
                   style: ElevatedButton.styleFrom(
-                    minimumSize: const Size(double.infinity, 48),
+                    minimumSize: const Size(double.infinity, 40),
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
                 // Chart Section
                 Card(
@@ -248,7 +249,7 @@ class _AuditScreenState extends State<AuditScreen> {
                             Text(
                               'Sales by Medicine',
                               style: GoogleFonts.montserrat(
-                                fontSize: 18,
+                                fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: const Color(0xFF007BFF),
                               ),
@@ -257,7 +258,7 @@ class _AuditScreenState extends State<AuditScreen> {
                         ),
                         const SizedBox(height: 16),
                         SizedBox(
-                          height: 250,
+                          height: 200,
                           child: BarChart(
                             BarChartData(
                               alignment: BarChartAlignment.spaceAround,
@@ -422,12 +423,16 @@ class _AuditScreenState extends State<AuditScreen> {
                 ExpansionTile(
                   title: Row(
                     children: [
-                      Icon(Icons.expand_more, color: const Color(0xFF007BFF)),
+                      Icon(
+                        Icons.expand_more,
+                        color: const Color(0xFF007BFF),
+                        size: 18,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Detailed Reports',
                         style: GoogleFonts.montserrat(
-                          fontSize: 18,
+                          fontSize: 12,
                           fontWeight: FontWeight.w600,
                           color: const Color(0xFF007BFF),
                         ),
@@ -448,13 +453,13 @@ class _AuditScreenState extends State<AuditScreen> {
                       );
 
                       return Card(
-                        margin: const EdgeInsets.only(bottom: 8.0),
-                        elevation: 2,
+                        margin: const EdgeInsets.only(bottom: 6.0),
+                        elevation: 1,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(6),
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.all(16.0),
+                          padding: const EdgeInsets.all(12.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -467,25 +472,25 @@ class _AuditScreenState extends State<AuditScreen> {
                                       'EEEE, yyyy-MM-dd',
                                     ).format(DateTime.parse(date)),
                                     style: GoogleFonts.montserrat(
-                                      fontSize: 16,
+                                      fontSize: 14,
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                   Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
+                                      horizontal: 6,
+                                      vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
                                       color: const Color(
                                         0xFF007BFF,
                                       ).withAlpha(25),
-                                      borderRadius: BorderRadius.circular(12),
+                                      borderRadius: BorderRadius.circular(10),
                                     ),
                                     child: Text(
                                       '${daySummary['totalItems']} items',
                                       style: GoogleFonts.montserrat(
-                                        fontSize: 12,
+                                        fontSize: 10,
                                         fontWeight: FontWeight.w600,
                                         color: const Color(0xFF007BFF),
                                       ),
@@ -493,7 +498,7 @@ class _AuditScreenState extends State<AuditScreen> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 6),
                               LinearProgressIndicator(
                                 value: summary['totalRevenue'] > 0
                                     ? daySummary['totalRevenue'] /
@@ -504,23 +509,23 @@ class _AuditScreenState extends State<AuditScreen> {
                                   Colors.green,
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 6),
                               Text(
                                 '${daySummary['totalRevenue'].toStringAsFixed(2)} Birr',
                                 style: GoogleFonts.montserrat(
-                                  fontSize: 14,
+                                  fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   color: Colors.green,
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 8),
                               ...(daySummary['medicineCount']
                                       as Map<String, int>)
                                   .entries
                                   .map((medicineEntry) {
                                     return Padding(
                                       padding: const EdgeInsets.only(
-                                        bottom: 4.0,
+                                        bottom: 2.0,
                                       ),
                                       child: Row(
                                         children: [
@@ -528,14 +533,14 @@ class _AuditScreenState extends State<AuditScreen> {
                                             child: Text(
                                               medicineEntry.key,
                                               style: GoogleFonts.montserrat(
-                                                fontSize: 14,
+                                                fontSize: 12,
                                               ),
                                             ),
                                           ),
                                           Text(
                                             '${medicineEntry.value} units',
                                             style: GoogleFonts.montserrat(
-                                              fontSize: 14,
+                                              fontSize: 12,
                                               fontWeight: FontWeight.w600,
                                             ),
                                           ),
@@ -587,7 +592,10 @@ class _AuditScreenState extends State<AuditScreen> {
                     },
                     child: Container(
                       margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 6.0,
+                        horizontal: 10.0,
+                      ),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? const Color(0xFF007BFF)
@@ -609,13 +617,17 @@ class _AuditScreenState extends State<AuditScreen> {
                               ]
                             : null,
                       ),
-                      child: Text(
-                        period,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.montserrat(
-                          color: isSelected ? Colors.white : Colors.grey[700],
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          period,
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          style: GoogleFonts.montserrat(
+                            color: isSelected ? Colors.white : Colors.grey[700],
+                            fontWeight: FontWeight.w600,
+                            fontSize: 10,
+                          ),
                         ),
                       ),
                     ),
@@ -675,7 +687,7 @@ class _AuditScreenState extends State<AuditScreen> {
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
         child: Column(
           children: [
             Icon(icon, color: color, size: 32),
@@ -683,7 +695,7 @@ class _AuditScreenState extends State<AuditScreen> {
             Text(
               title,
               style: GoogleFonts.montserrat(
-                fontSize: 12,
+                fontSize: 10,
                 color: Colors.grey[600],
               ),
               textAlign: TextAlign.center,
@@ -692,7 +704,7 @@ class _AuditScreenState extends State<AuditScreen> {
             Text(
               value,
               style: GoogleFonts.montserrat(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: color,
               ),

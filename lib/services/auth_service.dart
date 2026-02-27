@@ -24,7 +24,12 @@ class AuthService {
   // Priority: .env (flutter_dotenv) -> --dart-define(GOOGLE_SERVER_CLIENT_ID)
   // Example .env entry: GOOGLE_SERVER_CLIENT_ID=12345-abcde.apps.googleusercontent.com
   String _resolveGoogleServerClientId() {
-    final fromDotenv = dotenv.env['GOOGLE_SERVER_CLIENT_ID'];
+    String? fromDotenv;
+    try {
+      fromDotenv = dotenv.env['GOOGLE_SERVER_CLIENT_ID'];
+    } catch (_) {
+      fromDotenv = null;
+    }
     if (fromDotenv != null && fromDotenv.isNotEmpty) return fromDotenv;
     final fromDefine = const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
     if (fromDefine.isNotEmpty) return fromDefine;

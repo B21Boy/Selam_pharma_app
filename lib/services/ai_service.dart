@@ -4,7 +4,17 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AIService {
-  final String apiKey = dotenv.env['AI_API_KEY'] ?? '';
+  // safe environment helper copied from cloudnary service; prevents crash
+  // when dotenv wasn't initialized earlier.
+  static String _safeEnv(String key) {
+    try {
+      return dotenv.env[key] ?? '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  final String apiKey = _safeEnv('AI_API_KEY');
 
   Future<String> getAIRecommendation(
     String prompt, {

@@ -159,7 +159,7 @@ class ReportScreenState extends State<ReportScreen> {
         children: [
           // Period Selection Buttons
           Container(
-            margin: const EdgeInsets.all(16.0),
+            margin: const EdgeInsets.all(12.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: _timePeriods.map((period) {
@@ -173,8 +173,8 @@ class ReportScreenState extends State<ReportScreen> {
                       });
                     },
                     child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4.0),
-                      padding: const EdgeInsets.symmetric(vertical: 12.0),
+                      margin: const EdgeInsets.symmetric(horizontal: 2.0),
+                      padding: const EdgeInsets.symmetric(vertical: 8.0),
                       decoration: BoxDecoration(
                         color: isSelected
                             ? const Color(0xFF007BFF)
@@ -190,20 +190,47 @@ class ReportScreenState extends State<ReportScreen> {
                             ? [
                                 BoxShadow(
                                   color: const Color(0xFF007BFF).withAlpha(77),
-                                  blurRadius: 4,
+                                  blurRadius: 3,
                                   offset: const Offset(0, 2),
                                 ),
                               ]
                             : null,
                       ),
-                      child: Text(
-                        period,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.montserrat(
-                          color: isSelected ? Colors.white : Colors.grey[700],
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
+                      child: Padding(
+                        padding: period == 'This Month'
+                            ? const EdgeInsets.symmetric(horizontal: 8.0)
+                            : EdgeInsets.zero,
+                        child: period == 'This Month'
+                            ? FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.center,
+                                child: Text(
+                                  period,
+                                  maxLines: 1,
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.montserrat(
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.grey[700],
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                period,
+                                maxLines: 1,
+                                softWrap: false,
+                                overflow: TextOverflow.ellipsis,
+                                textAlign: TextAlign.center,
+                                style: GoogleFonts.montserrat(
+                                  color: isSelected
+                                      ? Colors.white
+                                      : Colors.grey[700],
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
                       ),
                     ),
                   ),
@@ -213,7 +240,7 @@ class ReportScreenState extends State<ReportScreen> {
           ),
           // Summary Cards
           Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(12.0),
             child: Row(
               children: [
                 Expanded(
@@ -229,18 +256,23 @@ class ReportScreenState extends State<ReportScreen> {
           ),
           // Search and Filter Bar
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.symmetric(horizontal: 12.0),
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
                 hintText: 'Search medicines or select date',
-                prefixIcon: Icon(Icons.search),
+                hintStyle: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                prefixIcon: Icon(Icons.search, size: 18),
                 suffixIcon: IconButton(
-                  icon: Icon(Icons.calendar_today),
+                  icon: Icon(Icons.calendar_today, size: 18),
                   onPressed: () => _pickDate(context),
                 ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
                 ),
               ),
             ),
@@ -266,15 +298,23 @@ class ReportScreenState extends State<ReportScreen> {
                       child: ExpansionTile(
                         title: Row(
                           children: [
-                            Icon(Icons.calendar_today, color: Colors.blue),
-                            SizedBox(width: 8),
-                            Text(
-                              DateFormat(
-                                'EEEE, MMMM dd, yyyy',
-                              ).format(DateTime.parse(date)),
-                              style: GoogleFonts.montserrat(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
+                            Icon(
+                              Icons.calendar_today,
+                              color: Colors.blue,
+                              size: 16,
+                            ),
+                            SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                DateFormat(
+                                  'EEEE, MMMM dd, yyyy',
+                                ).format(DateTime.parse(date)),
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ],
@@ -288,7 +328,7 @@ class ReportScreenState extends State<ReportScreen> {
                                   crossAxisCount: crossAxisCount,
                                   crossAxisSpacing: 8,
                                   mainAxisSpacing: 8,
-                                  childAspectRatio: 1.5,
+                                  childAspectRatio: 1.3,
                                 ),
                             itemCount: dayReports.length,
                             itemBuilder: (context, index) {
@@ -316,8 +356,9 @@ class ReportScreenState extends State<ReportScreen> {
                                             color: isProfitable
                                                 ? Colors.green
                                                 : Colors.orange,
+                                            size: 18,
                                           ),
-                                          SizedBox(width: 8),
+                                          SizedBox(width: 6),
                                           Expanded(
                                             child: GestureDetector(
                                               onTap: () => _showRenameDialog(
@@ -331,7 +372,7 @@ class ReportScreenState extends State<ReportScreen> {
                                                       report.medicineName,
                                                       style:
                                                           GoogleFonts.montserrat(
-                                                            fontSize: 16,
+                                                            fontSize: 14,
                                                             fontWeight:
                                                                 FontWeight.bold,
                                                             color:
@@ -348,7 +389,7 @@ class ReportScreenState extends State<ReportScreen> {
                                                   ),
                                                   Icon(
                                                     Icons.edit,
-                                                    size: 16,
+                                                    size: 14,
                                                     color: Colors.blue,
                                                   ),
                                                 ],
@@ -362,14 +403,14 @@ class ReportScreenState extends State<ReportScreen> {
                                         children: [
                                           Icon(
                                             Icons.inventory_2,
-                                            size: 16,
+                                            size: 14,
                                             color: Colors.grey[700],
                                           ),
                                           SizedBox(width: 4),
                                           Text(
                                             'Qty: ${report.soldQty}',
                                             style: GoogleFonts.montserrat(
-                                              fontSize: 14,
+                                              fontSize: 12,
                                               color: Theme.of(
                                                 context,
                                               ).textTheme.bodyMedium?.color,
@@ -381,14 +422,14 @@ class ReportScreenState extends State<ReportScreen> {
                                         children: [
                                           Icon(
                                             Icons.attach_money,
-                                            size: 16,
+                                            size: 14,
                                             color: Colors.grey[700],
                                           ),
                                           SizedBox(width: 4),
                                           Text(
                                             'Sold: ${report.sellPrice} Birr',
                                             style: GoogleFonts.montserrat(
-                                              fontSize: 14,
+                                              fontSize: 12,
                                               color: Theme.of(
                                                 context,
                                               ).textTheme.bodyMedium?.color,
@@ -486,15 +527,15 @@ class ReportScreenState extends State<ReportScreen> {
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(12.0),
         child: Column(
           children: [
-            Icon(icon, color: color, size: 32),
-            SizedBox(height: 8),
+            Icon(icon, color: color, size: 24),
+            SizedBox(height: 6),
             Text(
               title,
               style: GoogleFonts.montserrat(
-                fontSize: 12,
+                fontSize: 11,
                 color: Colors.grey[600],
               ),
               textAlign: TextAlign.center,
@@ -503,7 +544,7 @@ class ReportScreenState extends State<ReportScreen> {
             Text(
               value,
               style: GoogleFonts.montserrat(
-                fontSize: 16,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: color,
               ),

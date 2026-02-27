@@ -53,6 +53,19 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
   static const Color _accentGreen = Color(0xFF4CAF50);
   static const Color _successColor = Color(0xFF4CAF50);
 
+  // Local page scaling (base width chosen for designer: 500dp)
+  final double _baseWidth = 500.0;
+  final double _minScale = 0.7; // prevent unreadably small text
+  final double _maxScale = 1.0; // do not grow larger than base here
+  final double _pageScale = 1.0;
+  // UI constants for consistent look
+  final double _cornerRadius = 6.0;
+
+  // Make the page even more compact by default
+  double spSmall() => s(1);
+  double spMed() => s(2);
+  double spLarge() => s(3);
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -502,10 +515,10 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
           children: [
             SingleChildScrollView(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-                left: 16,
-                right: 16,
-                top: 16,
+                bottom: MediaQuery.of(context).viewInsets.bottom + s(12),
+                left: s(6),
+                right: s(6),
+                top: s(8),
               ),
               child: Form(
                 key: _formKey,
@@ -518,107 +531,127 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                       children: [
                         IconButton(
                           onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.close),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
+                          icon: const Icon(Icons.close, size: 16),
+                          padding: const EdgeInsets.all(4),
+                          constraints: const BoxConstraints(
+                            minWidth: 28,
+                            minHeight: 28,
+                          ),
                           style: IconButton.styleFrom(
                             foregroundColor: _primaryBlue,
                           ),
                         ),
-                        const SizedBox(width: 8),
+                        SizedBox(width: s(2)),
                         Expanded(
-                          child: Text(
-                            'Register Medicine',
-                            style: const TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: _primaryBlue,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: s(4)),
+                            child: Text(
+                              'Register Medicine',
+                              maxLines: 1,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w700,
+                                color: _primaryBlue,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center,
                           ),
                         ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Template Menu
-                            PopupMenuButton<String>(
-                              onSelected: (value) {
-                                if (value == 'save') {
-                                  _saveAsTemplate();
-                                }
-                              },
-                              itemBuilder: (context) => [
-                                const PopupMenuItem(
-                                  value: 'save',
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.save, color: _primaryBlue),
-                                      SizedBox(width: 8),
-                                      Text('Save as Template'),
-                                    ],
-                                  ),
+                        SizedBox(
+                          width: s(120),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  minWidth: 28,
+                                  minHeight: 28,
                                 ),
-                                const PopupMenuDivider(),
-                                ..._savedTemplates.map(
-                                  (template) => PopupMenuItem(
-                                    value:
-                                        'template_${_savedTemplates.indexOf(template)}',
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          Icons.bookmark,
-                                          color: _accentGreen,
-                                        ),
-                                        SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            template['name'],
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      ],
+                                child: PopupMenuButton<String>(
+                                  onSelected: (value) {
+                                    if (value == 'save') {
+                                      _saveAsTemplate();
+                                    }
+                                  },
+                                  itemBuilder: (context) => [
+                                    PopupMenuItem(
+                                      value: 'save',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.save, color: _primaryBlue),
+                                          SizedBox(width: s(4)),
+                                          Text('Save as Template'),
+                                        ],
+                                      ),
                                     ),
-                                    onTap: () => _applyTemplate(template),
+                                    const PopupMenuDivider(),
+                                    ..._savedTemplates.map(
+                                      (template) => PopupMenuItem(
+                                        value:
+                                            'template_${_savedTemplates.indexOf(template)}',
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.bookmark,
+                                              color: _accentGreen,
+                                            ),
+                                            SizedBox(width: s(4)),
+                                            Expanded(
+                                              child: Text(
+                                                template['name'],
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        onTap: () => _applyTemplate(template),
+                                      ),
+                                    ),
+                                  ],
+                                  icon: const Icon(
+                                    Icons.more_vert,
+                                    color: _primaryBlue,
+                                    size: 16,
                                   ),
+                                  tooltip: 'Templates & Options',
                                 ),
-                              ],
-                              icon: const Icon(
-                                Icons.more_vert,
-                                color: _primaryBlue,
                               ),
-                              tooltip: 'Templates & Options',
-                            ),
-                            const SizedBox(width: 4),
-                            IconButton(
-                              onPressed: () =>
-                                  setState(() => _isExpanded = !_isExpanded),
-                              icon: Icon(
-                                _isExpanded
-                                    ? Icons.fullscreen_exit
-                                    : Icons.fullscreen,
-                                color: _primaryBlue,
+                              SizedBox(width: s(2)),
+                              IconButton(
+                                onPressed: () =>
+                                    setState(() => _isExpanded = !_isExpanded),
+                                icon: Icon(
+                                  _isExpanded
+                                      ? Icons.fullscreen_exit
+                                      : Icons.fullscreen,
+                                  color: _primaryBlue,
+                                  size: 16,
+                                ),
+                                padding: const EdgeInsets.all(4),
+                                constraints: const BoxConstraints(
+                                  minWidth: 28,
+                                  minHeight: 28,
+                                ),
+                                tooltip: _isExpanded
+                                    ? 'Exit full screen'
+                                    : 'Full screen mode',
                               ),
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                              tooltip: _isExpanded
-                                  ? 'Exit full screen'
-                                  : 'Full screen mode',
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 16),
+                    SizedBox(height: spLarge()),
 
                     // Templates Section
                     if (_savedTemplates.isNotEmpty) _buildTemplatesSection(),
 
-                    const SizedBox(height: 8),
+                    SizedBox(height: spLarge()),
 
                     // Recent Items Section (only show if has recent items)
                     if (_recentMedicines.isNotEmpty) _buildRecentItemsSection(),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: spLarge()),
 
                     // Basic Information Section
                     _buildSectionCard(
@@ -629,24 +662,35 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                         TextFormField(
                           controller: _nameController,
                           decoration: InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: s(6),
+                              horizontal: s(8),
+                            ),
                             labelText: 'Medicine Name *',
+                            labelStyle: const TextStyle(fontSize: 12),
                             hintText: 'Enter medicine name',
-                            helperText: 'Enter the complete medicine name',
+
                             prefixIcon: const Icon(Icons.medication),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                _cornerRadius,
+                              ),
                               borderSide: BorderSide(
                                 color: _isNameValid ? Colors.grey : Colors.red,
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                _cornerRadius,
+                              ),
                               borderSide: BorderSide(
                                 color: _isNameValid ? Colors.grey : Colors.red,
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                _cornerRadius,
+                              ),
                               borderSide: BorderSide(
                                 color: Theme.of(context).primaryColor,
                                 width: 2,
@@ -654,7 +698,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                             ),
                           ),
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
                           textCapitalization: TextCapitalization.words,
@@ -665,22 +709,30 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: spMed()),
 
                         // Category
                         DropdownButtonFormField<String>(
+                          isExpanded: true,
+                          isDense: false,
                           initialValue: _selectedCategory,
                           decoration: InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: s(6),
+                              horizontal: s(8),
+                            ),
                             labelText: 'Category *',
                             hintText: 'Select medicine category',
-                            helperText: 'Choose the appropriate category',
+
                             prefixIcon: const Icon(Icons.category),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                _cornerRadius,
+                              ),
                             ),
                           ),
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             color: Colors.black87,
                           ),
                           dropdownColor: Colors.white,
@@ -701,16 +753,20 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                           validator: (value) =>
                               value == null ? 'Please select a category' : null,
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: spMed()),
 
                         // Barcode (optional, shown when scanned or entered)
                         TextFormField(
                           controller: _barcodeController,
                           decoration: InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: s(6),
+                              horizontal: s(8),
+                            ),
                             labelText: 'Barcode',
+                            labelStyle: const TextStyle(fontSize: 12),
                             hintText: 'Scan or enter barcode',
-                            helperText:
-                                'Optional barcode for medicine identification',
+
                             prefixIcon: const Icon(Icons.qr_code),
                             suffixIcon: IconButton(
                               icon: const Icon(Icons.qr_code_scanner),
@@ -718,18 +774,20 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                               tooltip: 'Scan Barcode',
                             ),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                _cornerRadius,
+                              ),
                             ),
                           ),
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 20),
+                    SizedBox(height: s(8)),
 
                     // Inventory Section
                     _buildSectionCard(
@@ -745,28 +803,34 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                               style: Theme.of(context).textTheme.titleSmall
                                   ?.copyWith(fontWeight: FontWeight.w500),
                             ),
-                            const SizedBox(height: 8),
+                            SizedBox(height: s(6)),
                             Row(
                               children: [
                                 IconButton(
                                   onPressed: _decrementQuantity,
-                                  icon: const Icon(Icons.remove),
+                                  icon: const Icon(Icons.remove, size: 14),
                                   style: IconButton.styleFrom(
                                     backgroundColor: Theme.of(
                                       context,
                                     ).primaryColor.withValues(alpha: 0.1),
-                                    minimumSize: const Size(48, 48),
+                                    minimumSize: const Size(40, 40),
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                SizedBox(width: s(4)),
                                 Expanded(
                                   child: TextFormField(
                                     controller: _totalQtyController,
                                     decoration: InputDecoration(
+                                      contentPadding: EdgeInsets.symmetric(
+                                        vertical: s(4),
+                                        horizontal: s(8),
+                                      ),
                                       hintText: 'Enter quantity',
-                                      helperText: 'Number of units available',
+
                                       border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(
+                                          _cornerRadius,
+                                        ),
                                         borderSide: BorderSide(
                                           color: _isQtyValid
                                               ? Colors.grey
@@ -774,7 +838,9 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                                         ),
                                       ),
                                       enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(
+                                          _cornerRadius,
+                                        ),
                                         borderSide: BorderSide(
                                           color: _isQtyValid
                                               ? Colors.grey
@@ -782,14 +848,16 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                                         ),
                                       ),
                                       focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(
+                                          _cornerRadius,
+                                        ),
                                         borderSide: BorderSide(
                                           color: Theme.of(context).primaryColor,
                                           width: 2,
                                         ),
                                       ),
                                     ),
-                                    style: const TextStyle(fontSize: 16),
+                                    style: const TextStyle(fontSize: 14),
                                     keyboardType: TextInputType.number,
                                     textAlign: TextAlign.center,
                                     inputFormatters: [
@@ -807,15 +875,15 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                                     },
                                   ),
                                 ),
-                                const SizedBox(width: 8),
+                                SizedBox(width: s(4)),
                                 IconButton(
                                   onPressed: _incrementQuantity,
-                                  icon: const Icon(Icons.add),
+                                  icon: const Icon(Icons.add, size: 14),
                                   style: IconButton.styleFrom(
                                     backgroundColor: Theme.of(
                                       context,
                                     ).primaryColor.withValues(alpha: 0.1),
-                                    minimumSize: const Size(48, 48),
+                                    minimumSize: const Size(40, 40),
                                   ),
                                 ),
                               ],
@@ -825,7 +893,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                       ],
                     ),
 
-                    const SizedBox(height: 20),
+                    SizedBox(height: s(8)),
 
                     // Pricing Section
                     _buildSectionCard(
@@ -836,12 +904,19 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                         TextFormField(
                           controller: _buyPriceController,
                           decoration: InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: s(6),
+                              horizontal: s(8),
+                            ),
                             labelText: 'Buy Price (per unit) *',
+                            labelStyle: const TextStyle(fontSize: 12),
                             hintText: '₹0.00',
-                            helperText: 'Cost price',
+
                             prefixIcon: const Icon(Icons.shopping_cart),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                _cornerRadius,
+                              ),
                               borderSide: BorderSide(
                                 color: _isBuyPriceValid
                                     ? Colors.grey
@@ -849,7 +924,9 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                _cornerRadius,
+                              ),
                               borderSide: BorderSide(
                                 color: _isBuyPriceValid
                                     ? Colors.grey
@@ -857,14 +934,16 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                _cornerRadius,
+                              ),
                               borderSide: BorderSide(
                                 color: Theme.of(context).primaryColor,
                                 width: 2,
                               ),
                             ),
                           ),
-                          style: const TextStyle(fontSize: 16),
+                          style: const TextStyle(fontSize: 14),
                           keyboardType: TextInputType.number,
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(
@@ -895,18 +974,25 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        SizedBox(height: spMed()),
 
                         // Sell Price
                         TextFormField(
                           controller: _sellPriceController,
                           decoration: InputDecoration(
+                            contentPadding: EdgeInsets.symmetric(
+                              vertical: s(6),
+                              horizontal: s(8),
+                            ),
                             labelText: 'Sell Price (per unit) *',
+                            labelStyle: const TextStyle(fontSize: 12),
                             hintText: '₹0.00',
-                            helperText: 'Selling price',
+
                             prefixIcon: const Icon(Icons.sell),
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                _cornerRadius,
+                              ),
                               borderSide: BorderSide(
                                 color: _isSellPriceValid
                                     ? Colors.grey
@@ -914,7 +1000,9 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                _cornerRadius,
+                              ),
                               borderSide: BorderSide(
                                 color: _isSellPriceValid
                                     ? Colors.grey
@@ -922,14 +1010,16 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                _cornerRadius,
+                              ),
                               borderSide: BorderSide(
                                 color: Theme.of(context).primaryColor,
                                 width: 2,
                               ),
                             ),
                           ),
-                          style: const TextStyle(fontSize: 16),
+                          style: const TextStyle(fontSize: 14),
                           keyboardType: TextInputType.number,
                           inputFormatters: [
                             FilteringTextInputFormatter.allow(
@@ -963,7 +1053,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                       ],
                     ),
 
-                    const SizedBox(height: 20),
+                    SizedBox(height: spLarge()),
 
                     // Media Section
                     _buildSectionCard(
@@ -976,33 +1066,37 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () => _pickImage(ImageSource.camera),
-                                icon: const Icon(Icons.camera_alt, size: 20),
+                                icon: const Icon(Icons.camera_alt, size: 14),
                                 label: const Text('Camera'),
                                 style: ElevatedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
+                                    vertical: 8,
                                   ),
-                                  minimumSize: const Size(0, 48),
+                                  minimumSize: const Size(0, 40),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(
+                                      _cornerRadius,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 12),
+                            SizedBox(width: s(4)),
                             Expanded(
                               child: ElevatedButton.icon(
                                 onPressed: () =>
                                     _pickImage(ImageSource.gallery),
-                                icon: const Icon(Icons.photo_library, size: 20),
+                                icon: const Icon(Icons.photo_library, size: 14),
                                 label: const Text('Gallery'),
                                 style: ElevatedButton.styleFrom(
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 12,
+                                    vertical: 8,
                                   ),
-                                  minimumSize: const Size(0, 48),
+                                  minimumSize: const Size(0, 40),
                                   shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(
+                                      _cornerRadius,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -1012,20 +1106,24 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
 
                         // Image preview
                         if (_imageBytes != null) ...[
-                          const SizedBox(height: 16),
+                          SizedBox(height: spMed()),
                           Center(
                             child: Container(
-                              width: 120,
-                              height: 120,
+                              width: 96,
+                              height: 96,
                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
+                                borderRadius: BorderRadius.circular(
+                                  _cornerRadius,
+                                ),
                                 border: Border.all(
                                   color: Colors.grey.shade300,
                                   width: 2,
                                 ),
                               ),
                               child: ClipRRect(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(
+                                  _cornerRadius,
+                                ),
                                 child: Image.memory(
                                   _imageBytes!,
                                   fit: BoxFit.cover,
@@ -1036,7 +1134,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                         ],
                       ],
                     ),
-                    const SizedBox(height: 24),
+                    SizedBox(height: s(24)),
 
                     // Register Button
                     AnimatedBuilder(
@@ -1045,10 +1143,12 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                         return ElevatedButton(
                           onPressed: _isLoading ? null : _registerMedicine,
                           style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            minimumSize: const Size(double.infinity, 56),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            minimumSize: const Size(double.infinity, 48),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(
+                                _cornerRadius,
+                              ),
                             ),
                             elevation: _isLoading ? 0 : 2,
                             backgroundColor: _isLoading
@@ -1070,11 +1170,11 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                                             ),
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
+                                    SizedBox(width: s(4)),
                                     const Text(
                                       'Registering...',
                                       style: TextStyle(
-                                        fontSize: 16,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -1083,7 +1183,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                               : const Text(
                                   'Register Medicine',
                                   style: TextStyle(
-                                    fontSize: 16,
+                                    fontSize: 12,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -1091,7 +1191,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                       },
                     ),
 
-                    const SizedBox(height: 16),
+                    SizedBox(height: spMed()),
                   ],
                 ),
               ),
@@ -1108,7 +1208,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                       child: Transform.scale(
                         scale: _successAnimation.value,
                         child: Container(
-                          padding: const EdgeInsets.all(24),
+                          padding: EdgeInsets.all(s(8)),
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
@@ -1126,9 +1226,9 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                               Icon(
                                 Icons.check_circle,
                                 color: Colors.green,
-                                size: 48,
+                                size: s(36),
                               ),
-                              const SizedBox(height: 16),
+                              SizedBox(height: spSmall()),
                               Text(
                                 'Medicine Registered!',
                                 style: Theme.of(context).textTheme.titleLarge
@@ -1137,7 +1237,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                                       color: Colors.green,
                                     ),
                               ),
-                              const SizedBox(height: 8),
+                              SizedBox(height: s(8)),
                               Text(
                                 'Successfully added to inventory',
                                 style: Theme.of(context).textTheme.bodyMedium
@@ -1158,40 +1258,51 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
     );
   }
 
+  // Convenient helper to scale spacings/paddings/radii within this page.
+  double s(double value) => value * _pageScale;
+
   Widget _buildTemplatesSection() {
     return Card(
       elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_cornerRadius),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(s(2)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.bookmark, color: _accentGreen, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Saved Templates',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: _accentGreen,
+                Icon(Icons.bookmark, color: _accentGreen, size: 16),
+                SizedBox(width: s(4)),
+                Flexible(
+                  child: Text(
+                    'Saved Templates',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _accentGreen,
+                    ),
                   ),
                 ),
-                const Spacer(),
                 IconButton(
                   onPressed: _saveAsTemplate,
                   icon: Icon(Icons.add, color: _accentGreen),
                   tooltip: 'Save current as template',
                   padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+                  constraints: const BoxConstraints(
+                    minWidth: 36,
+                    minHeight: 36,
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: s(4)),
             SizedBox(
-              height: 80,
+              height: 88,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: _savedTemplates.length,
@@ -1201,11 +1312,11 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                     onTap: () => _applyTemplate(template),
                     child: Container(
                       width: 140,
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.all(8),
+                      margin: EdgeInsets.only(right: s(4)),
+                      padding: EdgeInsets.all(s(2)),
                       decoration: BoxDecoration(
                         color: _accentGreen.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(_cornerRadius),
                         border: Border.all(
                           color: _accentGreen.withValues(alpha: 0.2),
                         ),
@@ -1217,22 +1328,22 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                             template['name'] ?? 'Unknown',
                             style: const TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
+                          SizedBox(height: spSmall()),
                           Text(
                             template['category'] ?? 'Others',
                             style: TextStyle(fontSize: 10, color: _accentGreen),
                           ),
-                          const SizedBox(height: 2),
+                          SizedBox(height: spSmall()),
                           Text(
                             '₹${template['sellPrice'] ?? 0.0}',
                             style: const TextStyle(
                               fontSize: 11,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                               color: _primaryBlue,
                             ),
                           ),
@@ -1252,29 +1363,35 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
   Widget _buildRecentItemsSection() {
     return Card(
       elevation: 1,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_cornerRadius),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(s(2)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(Icons.history, color: _primaryBlue, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Recent Items',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: _primaryBlue,
+                Icon(Icons.history, color: _primaryBlue, size: 16),
+                SizedBox(width: s(4)),
+                Flexible(
+                  child: Text(
+                    'Recent Items',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _primaryBlue,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: s(4)),
             SizedBox(
-              height: 80,
+              height: 88,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
                 itemCount: _recentMedicines.length,
@@ -1284,11 +1401,11 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                     onTap: () => _applyTemplate(item),
                     child: Container(
                       width: 140,
-                      margin: const EdgeInsets.only(right: 8),
-                      padding: const EdgeInsets.all(8),
+                      margin: EdgeInsets.only(right: s(4)),
+                      padding: EdgeInsets.all(s(2)),
                       decoration: BoxDecoration(
                         color: _primaryBlue.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(_cornerRadius),
                         border: Border.all(
                           color: _primaryBlue.withValues(alpha: 0.2),
                         ),
@@ -1300,22 +1417,22 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                             item['name'] ?? 'Unknown',
                             style: const TextStyle(
                               fontSize: 12,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
+                          SizedBox(height: spSmall()),
                           Text(
                             item['category'] ?? 'Others',
                             style: TextStyle(fontSize: 10, color: _primaryBlue),
                           ),
-                          const SizedBox(height: 2),
+                          SizedBox(height: spSmall()),
                           Text(
                             '₹${item['sellPrice'] ?? 0.0}',
                             style: const TextStyle(
                               fontSize: 11,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                               color: _accentGreen,
                             ),
                           ),
@@ -1339,27 +1456,33 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
   }) {
     return Card(
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(_cornerRadius),
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(s(2)),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                Icon(icon, color: _primaryBlue, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: _primaryBlue,
+                Icon(icon, color: _primaryBlue, size: 16),
+                SizedBox(width: s(4)),
+                Flexible(
+                  child: Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: _primaryBlue,
+                    ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: s(4)),
             ...children,
           ],
         ),

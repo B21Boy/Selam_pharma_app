@@ -16,12 +16,29 @@ import 'package:crypto/crypto.dart' as crypto;
 /// If those aren't provided, the original hard-coded defaults are used as
 /// a fallback.
 class CloudinaryService {
+  // Helper that safely reads from dotenv, returning `fallback` if the
+  // environment hasn't been loaded yet or if any error occurs. Without this
+  // guard reading `dotenv.env` throws [NotInitializedError], which was
+  // causing image uploads to fail during early sync when the .env file could
+  // not be loaded.
+  static String _safeEnv(String key, String fallback) {
+    try {
+      return dotenv.env[key] ?? fallback;
+    } catch (e) {
+      // dotenv wasn't initialized yet (or another issue); fall back.
+      debugPrint(
+        'CloudinaryService: dotenv not initialized while reading $key, using fallback',
+      );
+      return fallback;
+    }
+  }
+
   // Fallback defaults (preserve previous behavior if dotenv not loaded)
   static String get _cloudName =>
-      dotenv.env['CLOUDINARY_CLOUD_NAME'] ?? 'dwfz6c6x0';
+      _safeEnv('CLOUDINARY_CLOUD_NAME', 'dwfz6c6x0');
 
   static String get _uploadPreset =>
-      dotenv.env['CLOUDINARY_UPLOAD_PRESET'] ?? 'pharmacy_app';
+      _safeEnv('CLOUDINARY_UPLOAD_PRESET', 'pharmacy_app');
 
   /// Uploads a `File` to Cloudinary. Returns the secure URL on success.
   ///
@@ -104,9 +121,12 @@ class CloudinaryService {
   /// Deletes an image from Cloudinary by its `publicId`.
   /// Requires `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` to be present in env.
   static Future<void> deleteImage(String publicId) async {
-    final apiKey = dotenv.env['CLOUDINARY_API_KEY'];
-    final apiSecret = dotenv.env['CLOUDINARY_API_SECRET'];
-    if (apiKey == null || apiSecret == null) {
+    // reading the credentials may also throw if dotenv is uninitialized, so
+    // we'll use our helper so the call fails gracefully in offline/early-start
+    // situations.  We still require both values to be non-empty, however.
+    final apiKey = _safeEnv('CLOUDINARY_API_KEY', '');
+    final apiSecret = _safeEnv('CLOUDINARY_API_SECRET', '');
+    if (apiKey.isEmpty || apiSecret.isEmpty) {
       throw StateError(
         'CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET required to delete images',
       );
