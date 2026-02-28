@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+// local offline-auth helpers
+import 'local_auth.dart';
+
 // Note: google_sign_in API uses a single shared instance. See package docs.
 
 class AccountExistsWithDifferentCredential implements Exception {
@@ -204,7 +207,14 @@ class AuthService {
           return 'Operation not allowed. Contact support.';
         case 'weak-password':
           return 'Password is too weak.';
+        case 'network-request-failed':
+          return 'Network error. Please check your internet connection.';
         default:
+          // Sometimes the message itself contains network details
+          final msg = e.message?.toLowerCase() ?? '';
+          if (msg.contains('network') || msg.contains('internet')) {
+            return 'Unable to reach server – please check your connection.';
+          }
           return e.message ?? 'Authentication error.';
       }
     }
@@ -229,5 +239,11 @@ class AuthService {
     return 'An unexpected error occurred.';
   }
 
-  Future<void> signOut() async => _auth.signOut();
+  Future<void> signOut() async {
+    await _auth.signOut();
+    // clear any cached local credentials so a log‑out is clean
+    try {
+      await LocalAuth.clearAll();
+    } catch (_) {}
+  }
 }

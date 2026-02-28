@@ -17,6 +17,8 @@ class PharmacyProvider extends ChangeNotifier {
   List<Medicine> _medicines = [];
   List<Report> _reports = [];
   bool _initialized = false;
+  // Default threshold under which a medicine should be considered for reorder.
+  int reorderThreshold = 10;
 
   List<Medicine> get medicines => _medicines;
   List<Report> get reports => _reports;
@@ -325,6 +327,242 @@ class PharmacyProvider extends ChangeNotifier {
     } catch (e) {
       return null;
     }
+  }
+
+  /// utility that returns all medicine names mentioned in [text].
+  ///
+  /// The check is case‑insensitive and looks for the medicine name as a
+  /// substring; callers may want to guard against false positives if they
+  /// have very short names.
+  List<String> extractMedicineNames(String text) {
+    final lower = text.toLowerCase();
+    final found = <String>{};
+    for (final med in _medicines) {
+      final nameLower = med.name.toLowerCase();
+      if (lower.contains(nameLower)) {
+        found.add(med.name);
+      }
+    }
+    return found.toList();
+  }
+
+  /// Returns the most recent sale datetime for [medicineName], or null.
+  DateTime? lastSaleFor(String medicineName) {
+    final reportsFor = _reports.where((r) => r.medicineName == medicineName);
+    if (reportsFor.isEmpty) return null;
+    reportsFor.toList().sort((a, b) => b.dateTime.compareTo(a.dateTime));
+    return reportsFor.first.dateTime;
+  }
+
+  /// Heuristic: should reorder when remainingQty <= threshold.
+  bool shouldReorder(String medicineName, {int? threshold}) {
+    threshold ??= reorderThreshold;
+    try {
+      final med = _medicines.firstWhere((m) => m.name == medicineName);
+      return med.remainingQty <= threshold;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // simple Levenshtein distance for fuzzy suggestions
+  int _levenshtein(String a, String b) {
+    final la = a.length;
+    final lb = b.length;
+    if (la == 0) return lb;
+    if (lb == 0) return la;
+    final v = List.generate(la + 1, (_) => List<int>.filled(lb + 1, 0));
+    for (var i = 0; i <= la; i++) {
+      v[i][0] = i;
+    }
+    for (var j = 0; j <= lb; j++) {
+      v[0][j] = j;
+    }
+    for (var i = 1; i <= la; i++) {
+      for (var j = 1; j <= lb; j++) {
+        final cost = a[i - 1] == b[j - 1] ? 0 : 1;
+        v[i][j] = [
+          v[i - 1][j] + 1,
+          v[i][j - 1] + 1,
+          v[i - 1][j - 1] + cost,
+        ].reduce((x, y) => x < y ? x : y);
+      }
+    }
+    return v[la][lb];
+  }
+
+  /// Suggest closest medicine names for an unknown query token.
+  List<String> suggestClosestNames(String token, {int max = 5}) {
+    final lower = token.toLowerCase();
+    final scores = <String, int>{};
+    for (final m in _medicines) {
+      final name = m.name;
+      final dist = _levenshtein(lower, name.toLowerCase());
+      scores[name] = dist;
+    }
+    final sorted = scores.keys.toList()
+      ..sort((a, b) => scores[a]!.compareTo(scores[b]!));
+    return sorted.take(max).toList();
+  }
+
+  int soldQtyFor(String medicineName, {DateTime? from, DateTime? to}) {
+    var reportsForMed = _reports.where((r) => r.medicineName == medicineName);
+    if (from != null) {
+      reportsForMed = reportsForMed.where((r) => !r.dateTime.isBefore(from));
+    }
+    if (to != null) {
+      reportsForMed = reportsForMed.where((r) => r.dateTime.isBefore(to));
+    }
+    return reportsForMed.fold(0, (sum, r) => sum + r.soldQty);
+  }
+
+  int profitFor(String medicineName, {DateTime? from, DateTime? to}) {
+    var reportsForMed = _reports.where((r) => r.medicineName == medicineName);
+    if (from != null) {
+      reportsForMed = reportsForMed.where((r) => !r.dateTime.isBefore(from));
+    }
+    if (to != null) {
+      reportsForMed = reportsForMed.where((r) => r.dateTime.isBefore(to));
+    }
+    return reportsForMed.fold(0, (sum, r) => sum + r.totalGain);
+  }
+
+  DateTimeRange? _extractDateRangeFromQuery(String query) {
+    final lower = query.toLowerCase();
+    final now = DateTime.now();
+    if (lower.contains('today')) {
+      final start = DateTime(now.year, now.month, now.day);
+      final end = start.add(const Duration(days: 1));
+      return DateTimeRange(start: start, end: end);
+    } else if (lower.contains('yesterday')) {
+      final start = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(const Duration(days: 1));
+      final end = start.add(const Duration(days: 1));
+      return DateTimeRange(start: start, end: end);
+    }
+    // this week / last week
+    if (lower.contains('this week')) {
+      final start = DateTime.now().subtract(Duration(days: now.weekday - 1));
+      final s = DateTime(start.year, start.month, start.day);
+      final e = s.add(const Duration(days: 7));
+      return DateTimeRange(start: s, end: e);
+    }
+    if (lower.contains('last week')) {
+      final start = DateTime.now().subtract(
+        Duration(days: now.weekday - 1 + 7),
+      );
+      final s = DateTime(start.year, start.month, start.day);
+      final e = s.add(const Duration(days: 7));
+      return DateTimeRange(start: s, end: e);
+    }
+    // this month / last month
+    if (lower.contains('this month')) {
+      final s = DateTime(now.year, now.month, 1);
+      final e = DateTime(now.year, now.month + 1, 1);
+      return DateTimeRange(start: s, end: e);
+    }
+    if (lower.contains('last month')) {
+      final ym = DateTime(now.year, now.month - 1, 1);
+      final s = DateTime(ym.year, ym.month, 1);
+      final e = DateTime(ym.year, ym.month + 1, 1);
+      return DateTimeRange(start: s, end: e);
+    }
+    return null;
+  }
+
+  String _formatRange(DateTimeRange range) {
+    if (range.duration == const Duration(days: 1)) {
+      final day = range.start;
+      return '${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}';
+    }
+    return '${range.start} - ${range.end}';
+  }
+
+  /// Builds a simple text summary for one or more medicine names.  The
+  /// optional [query] is used to detect time‑related words such as
+  /// "today"/"yesterday" and include corresponding sold/profit figures.
+  String statusTextFor(List<String> names, {String? query}) {
+    final buf = StringBuffer();
+    final range = query != null ? _extractDateRangeFromQuery(query) : null;
+    for (var name in names) {
+      final med = _medicines.firstWhere((m) => m.name == name);
+      buf.writeln(
+        'Medicine: ${med.name}${med.barcode != null ? ' (barcode: ${med.barcode})' : ''}',
+      );
+      buf.writeln('Remaining: ${med.remainingQty}');
+
+      final totalSold = soldQtyFor(name);
+      buf.writeln('Total sold (all time): $totalSold');
+      if (range != null) {
+        final soldRange = soldQtyFor(name, from: range.start, to: range.end);
+        buf.writeln('Sold ${_formatRange(range)}: $soldRange');
+      }
+
+      final profit = profitFor(name, from: range?.start, to: range?.end);
+      buf.writeln(
+        'Profit${range == null ? ' (all time)' : ' ${_formatRange(range)}'}: \$$profit',
+      );
+
+      final lastSale = lastSaleFor(name);
+      buf.writeln(
+        'Last sold: ${lastSale != null ? lastSale.toIso8601String() : 'Never'}',
+      );
+
+      // expiry not stored in model; report unknown when absent
+      buf.writeln('Expiry: Unknown');
+
+      final reorder = shouldReorder(name) ? 'Yes' : 'No';
+      buf.writeln('Reorder recommended: $reorder');
+      buf.writeln('');
+    }
+    return buf.toString();
+  }
+
+  /// Central entry point used by the chat screen.  It tries to detect a
+  /// barcode or medicine name(s) in [input] and returns a textual answer
+  /// containing quantities, sales and profit.  If no known medicine is
+  /// mentioned the method returns a helpful fallback message.
+  Future<String> chatReply(String input) async {
+    if (!_initialized) await initBoxes();
+    final cleaned = input.trim();
+    if (cleaned.isEmpty) return '';
+
+    // barcode check (exact match)
+    final barcodeMed = findMedicineByBarcode(cleaned);
+    if (barcodeMed != null) {
+      return statusTextFor([barcodeMed.name]);
+    }
+
+    final names = extractMedicineNames(input);
+    if (names.isNotEmpty) {
+      return statusTextFor(names, query: input);
+    }
+
+    // If nothing matched, provide sensible suggestions based on fuzzy
+    // matching of the whole input or its tokens.
+    final tokens = cleaned
+        .split(RegExp(r'[^A-Za-z0-9]+'))
+        .where((t) => t.isNotEmpty)
+        .toList();
+    final suggestions = <String>{};
+    if (tokens.isNotEmpty) {
+      for (final t in tokens) {
+        final s = suggestClosestNames(t, max: 3);
+        suggestions.addAll(s);
+      }
+    } else {
+      suggestions.addAll(suggestClosestNames(cleaned, max: 5));
+    }
+
+    if (suggestions.isNotEmpty) {
+      final list = suggestions.take(5).join(', ');
+      return 'No matches for "$cleaned". Did you mean: $list?';
+    }
+
+    return 'Sorry, I could not find any medicine mentioned in your message. Please enter a valid medicine name or scan its barcode.';
   }
 
   /// Build a safe prompt and get AI recommendation, validating results.

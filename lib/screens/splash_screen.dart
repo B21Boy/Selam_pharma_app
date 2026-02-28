@@ -37,21 +37,13 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _start() async {
-    // If a locally stored account exists (Hive), prefer that and route
-    // to home immediately (after the minimum splash delay). This allows
-    // offline startup to go straight to the app when credentials were
-    // previously saved.
-    try {
-      final box = await Hive.openBox('accounts');
-      if (box.isNotEmpty) {
-        await Future.delayed(const Duration(milliseconds: 1400));
-        if (!mounted) return;
-        _navigateNext(true);
-        return;
-      }
-    } catch (_) {
-      // If opening the box fails, fall back to normal auth check below.
-    }
+    // The previous version of this method short‑circuited to home if the
+    // `accounts` box contained any entries.  That optimization caused a
+    // regression where a user who explicitly signed out would still be
+    // routed to the home screen on the next launch (the credentials were
+    // left behind).  We now perform the full auth check first and let the
+    // offline‑fallback in `_isLoggedIn` handle the Hive box if the SDK
+    // throws an exception (typically when offline).
 
     final authFuture = _isLoggedIn();
     // keep splash visible for at least 1.4s while auth check runs

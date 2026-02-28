@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../providers/pharmacy_provider.dart';
 import '../models/medicine.dart';
@@ -47,7 +49,7 @@ class _ChatScreenState extends State<ChatScreen> {
           style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
         ),
         content: Text(
-          'This assistant provides general medicine suggestions only. Consult a pharmacist or doctor.',
+          'This assistant provides inventory and sales information only. It cannot diagnose or recommend dosages. Consult a pharmacist or doctor for medical advice.',
           style: GoogleFonts.montserrat(),
         ),
         actions: [
@@ -83,53 +85,109 @@ class _ChatScreenState extends State<ChatScreen> {
                 fontSize: 14,
               ),
             ),
-            if (!message.isUser && message.text.contains('Medicine Name:'))
+            if (!message.isUser &&
+                (message.text.contains('Medicine Name:') ||
+                    message.text.contains('Medicine:')))
               Padding(
                 padding: const EdgeInsets.only(top: 8),
-                child: ElevatedButton(
-                  onPressed: () {
-                    final lines = message.text.split('\n');
-                    final medicineNameLine = lines.firstWhere(
-                      (l) => l.startsWith('Medicine Name:'),
-                      orElse: () => '',
-                    );
-                    if (medicineNameLine.isNotEmpty) {
-                      final medName = medicineNameLine
-                          .replaceFirst('Medicine Name:', '')
-                          .trim();
-                      final provider = context.read<PharmacyProvider>();
-                      final medicine = provider.medicines.firstWhere(
-                        (m) => m.name == medName,
-                        orElse: () => Medicine(
-                          id: '',
-                          name: '',
-                          totalQty: 0,
-                          buyPrice: 0,
-                          sellPrice: 0,
-                        ),
-                      );
-                      if (medicine.id.isNotEmpty) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                MedicineDetailScreen(medicine: medicine),
-                          ),
+                child: Row(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        final lines = message.text.split('\n');
+                        final medicineNameLine = lines.firstWhere(
+                          (l) =>
+                              l.startsWith('Medicine Name:') ||
+                              l.startsWith('Medicine:'),
+                          orElse: () => '',
                         );
-                      }
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF28A745),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 6,
+                        if (medicineNameLine.isNotEmpty) {
+                          var medName = medicineNameLine;
+                          if (medName.startsWith('Medicine Name:')) {
+                            medName = medName
+                                .replaceFirst('Medicine Name:', '')
+                                .trim();
+                          } else if (medName.startsWith('Medicine:')) {
+                            medName = medName
+                                .replaceFirst('Medicine:', '')
+                                .trim();
+                            medName = medName.split('(barcode:').first.trim();
+                          }
+                          final provider = context.read<PharmacyProvider>();
+                          final medicine = provider.medicines.firstWhere(
+                            (m) => m.name == medName,
+                            orElse: () => Medicine(
+                              id: '',
+                              name: '',
+                              totalQty: 0,
+                              buyPrice: 0,
+                              sellPrice: 0,
+                            ),
+                          );
+                          if (medicine.id.isNotEmpty) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    MedicineDetailScreen(medicine: medicine),
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF28A745),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                      ),
+                      child: Text(
+                        'View Medicine',
+                        style: GoogleFonts.montserrat(fontSize: 12),
+                      ),
                     ),
-                  ),
-                  child: Text(
-                    'View Medicine',
-                    style: GoogleFonts.montserrat(fontSize: 12),
-                  ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: () {
+                        final lines = message.text.split('\n');
+                        final medicineNameLine = lines.firstWhere(
+                          (l) =>
+                              l.startsWith('Medicine Name:') ||
+                              l.startsWith('Medicine:'),
+                          orElse: () => '',
+                        );
+                        if (medicineNameLine.isNotEmpty) {
+                          var medName = medicineNameLine;
+                          if (medName.startsWith('Medicine Name:')) {
+                            medName = medName
+                                .replaceFirst('Medicine Name:', '')
+                                .trim();
+                          } else if (medName.startsWith('Medicine:')) {
+                            medName = medName
+                                .replaceFirst('Medicine:', '')
+                                .trim();
+                            medName = medName.split('(barcode:').first.trim();
+                          }
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => ReportScreen()),
+                          );
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF0069D9),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                      ),
+                      child: Text(
+                        'Show Sales',
+                        style: GoogleFonts.montserrat(fontSize: 12),
+                      ),
+                    ),
+                  ],
                 ),
               ),
           ],
@@ -165,31 +223,89 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildInputArea() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
       decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey[300]!)),
+        color: isDark ? const Color.fromARGB(255, 8, 0, 21) : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? Colors.grey[700]! : Colors.grey[300]!,
+          ),
+        ),
       ),
       child: Row(
         children: [
           Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: InputDecoration(
-                hintText: 'Describe symptoms (e.g., headache, fever)',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-              onSubmitted: (_) => _sendMessage(),
+            child: Autocomplete<String>(
+              optionsBuilder: (TextEditingValue textEditingValue) {
+                if (textEditingValue.text.isEmpty) {
+                  return const Iterable<String>.empty();
+                }
+                return context
+                    .read<PharmacyProvider>()
+                    .medicines
+                    .map((m) => m.name)
+                    .where(
+                      (name) => name.toLowerCase().contains(
+                        textEditingValue.text.toLowerCase(),
+                      ),
+                    );
+              },
+              fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                // keep controllers in sync
+                controller.text = _messageController.text;
+                controller.selection = _messageController.selection;
+                controller.addListener(() {
+                  _messageController.text = controller.text;
+                  _messageController.selection = controller.selection;
+                });
+                return TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 12,
+                    color: isDark
+                        ? const Color.fromARGB(255, 232, 230, 230)
+                        : const Color.fromRGBO(9, 1, 29, 1),
+                  ),
+                  decoration: InputDecoration(
+                    hintText:
+                        'Describe medicine names or scan barcode (e.g. paracetamol)',
+                    hintStyle: GoogleFonts.montserrat(
+                      fontSize: 12,
+                      color: isDark ? Colors.grey[400] : Colors.grey,
+                    ),
+                    filled: !isDark,
+                    fillColor: isDark ? Colors.transparent : Colors.white,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide(
+                        color: isDark ? Colors.grey[500]! : Colors.grey[400]!,
+                      ),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                  ),
+                  onSubmitted: (_) => _sendMessage(),
+                );
+              },
+              onSelected: (selection) {
+                _messageController.text = selection;
+              },
             ),
           ),
           const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.qr_code_scanner),
+            tooltip: 'Scan barcode',
+            onPressed: _scanBarcode,
+          ),
+          const SizedBox(width: 4),
           FloatingActionButton(
             onPressed: _sendMessage,
             mini: true,
@@ -198,6 +314,52 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _scanBarcode() async {
+    final messenger = ScaffoldMessenger.of(context);
+
+    var status = await Permission.camera.request();
+    if (!mounted) return;
+    if (!status.isGranted) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Camera permission is required for barcode scanning'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final result = await showDialog<String>(
+        context: context,
+        builder: (context) => Dialog(
+          child: SizedBox(
+            height: 400,
+            child: MobileScanner(
+              onDetect: (capture) {
+                final List<Barcode> barcodes = capture.barcodes;
+                if (barcodes.isNotEmpty) {
+                  final barcode = barcodes.first.rawValue;
+                  if (barcode != null) {
+                    Navigator.of(context).pop(barcode);
+                  }
+                }
+              },
+            ),
+          ),
+        ),
+      );
+
+      if (result != null) {
+        // directly process the scanned string as a chat query
+        _messageController.text = result;
+        _sendMessage();
+      }
+    } catch (_) {
+      // ignore scanner errors for now
+    }
   }
 
   Future<void> _sendMessage() async {
@@ -213,7 +375,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
     try {
       final provider = context.read<PharmacyProvider>();
-      final response = await provider.recommendFromSymptoms(text.toLowerCase());
+      final response = await provider.chatReply(text);
       setState(() {
         _messages.add(_ChatMessage(text: response, isUser: false));
       });
@@ -221,8 +383,7 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         _messages.add(
           _ChatMessage(
-            text:
-                "I'm not confident recommending a medicine. Please consult a pharmacist or doctor.",
+            text: 'There was an error processing your request.',
             isUser: false,
           ),
         );

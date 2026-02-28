@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher_string.dart';
 import '../utils/ui_helpers.dart';
 
@@ -41,22 +42,44 @@ class _ContactScreenState extends State<ContactScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Contact Information'),
-          content: const Column(
+          title: Text(
+            'Contact Information',
+            style: GoogleFonts.montserrat(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Phone No: +251960625242'),
-              SizedBox(height: 8),
-              Text('Email: deksiman721@gmail.com'),
-              SizedBox(height: 8),
-              Text('Telegram: @Dekxaaa'),
+              Text(
+                'Phone No: +251960625242',
+                style: GoogleFonts.montserrat(fontSize: 12),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Email: deksiman721@gmail.com',
+                style: GoogleFonts.montserrat(fontSize: 12),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Telegram: @Dekxaaa',
+                style: GoogleFonts.montserrat(fontSize: 12),
+              ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                textStyle: GoogleFonts.montserrat(fontSize: 12),
+              ),
+              child: Text('Close'),
             ),
             ElevatedButton(
               onPressed: () async {
@@ -74,7 +97,16 @@ class _ContactScreenState extends State<ContactScreen> {
                   }
                 }
               },
-              child: const Text('Contact via Email'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+              ),
+              child: Text(
+                'Contact via Email',
+                style: GoogleFonts.montserrat(fontSize: 12),
+              ),
             ),
           ],
         );

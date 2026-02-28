@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '../providers/pharmacy_provider.dart';
-import '../providers/theme_provider.dart';
+// theme toggling removed for home screen only
+// import '../providers/theme_provider.dart';
 import '../models/medicine.dart';
 import 'medicine_detail_screen.dart';
 import 'register_medicine_dialog.dart';
@@ -62,7 +63,7 @@ class HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = context.watch<ThemeProvider>();
+    // themeProvider not needed on this screen
     final pharmacyProvider = context.watch<PharmacyProvider>();
     final query = _searchController.text;
     final selectedCategory = _categories[_selectedCategoryIndex];
@@ -134,16 +135,8 @@ class HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              themeProvider.isDarkMode ? Icons.light_mode : Icons.dark_mode,
-              size: 20,
-            ),
-            onPressed: () => themeProvider.toggleTheme(),
-            tooltip: 'Toggle theme',
-          ),
-        ],
+        // no actions on this page; theme toggle removed
+        actions: [],
         toolbarHeight: 56,
         titleSpacing: 8,
       ),

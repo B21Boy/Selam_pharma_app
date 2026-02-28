@@ -352,10 +352,13 @@ class _LoginScreenState extends State<LoginScreen> {
           physics: BouncingScrollPhysics(),
           child: Column(
             children: [
-              // Top curved header
+              // Top curved header (compact)
               AuthHeader(
                 title: 'Drug Store',
                 subtitle: 'Welcome back! please login to your account',
+                height: 160,
+                titleFontSize: 20,
+                subtitleFontSize: 12,
               ),
 
               SizedBox(height: 12),
@@ -473,9 +476,16 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextFormField(
                             controller: _emailCtrl,
                             decoration: InputDecoration(
-                              hintText: ' Email',
+                              hintText: 'Email',
+                              hintStyle: TextStyle(fontSize: 12),
                               errorText: _emailError,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 8,
+                                horizontal: 12,
+                              ),
                             ),
+                            style: TextStyle(fontSize: 12),
                             keyboardType: TextInputType.emailAddress,
                             validator: (v) {
                               if (v == null || v.trim().isEmpty) {
@@ -498,7 +508,13 @@ class _LoginScreenState extends State<LoginScreen> {
                             controller: _passCtrl,
                             decoration: InputDecoration(
                               hintText: 'Password',
+                              hintStyle: TextStyle(fontSize: 12),
                               errorText: _passwordError,
+                              isDense: true,
+                              contentPadding: const EdgeInsets.symmetric(
+                                vertical: 8,
+                                horizontal: 12,
+                              ),
                               suffixIcon: AnimatedRotation(
                                 turns: _obscurePassword ? 0.0 : 0.5,
                                 duration: const Duration(milliseconds: 220),
@@ -517,14 +533,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                         .withValues(alpha: 0.65),
                                   ),
                                   onPressed: () {
-                                    setState(
-                                      () =>
-                                          _obscurePassword = !_obscurePassword,
-                                    );
+                                    setState(() {
+                                      _obscurePassword = !_obscurePassword;
+                                    });
                                   },
                                 ),
                               ),
                             ),
+                            style: TextStyle(fontSize: 12),
                             obscureText: _obscurePassword,
                             validator: (v) {
                               if (v == null || v.isEmpty) {
@@ -543,21 +559,21 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           SizedBox(height: 18),
 
-                          // Primary login button
+                          // Primary login button (compact)
                           ElevatedButton(
                             onPressed: _loading ? null : _submit,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: cs.primary,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(28),
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
                               elevation: 4,
                             ),
                             child: _loading
                                 ? SizedBox(
-                                    height: 18,
-                                    width: 18,
+                                    height: 16,
+                                    width: 16,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
                                       color: Colors.white,
@@ -565,7 +581,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   )
                                 : Text(
                                     'Log In',
-                                    style: TextStyle(fontSize: 16),
+                                    style: TextStyle(fontSize: 14),
                                   ),
                           ),
 

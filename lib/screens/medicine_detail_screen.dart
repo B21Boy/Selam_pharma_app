@@ -79,24 +79,59 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
       builder: (context) => AlertDialog(
         title: Text(
           'Restock Medicine',
-          style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+          style: GoogleFonts.montserrat(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextFormField(
               controller: _restockQtyController,
-              decoration: InputDecoration(labelText: 'New Quantity'),
+              decoration: InputDecoration(
+                labelText: 'New Quantity',
+                labelStyle: GoogleFonts.montserrat(fontSize: 12),
+                hintStyle: GoogleFonts.montserrat(fontSize: 12),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
+                ),
+              ),
+              style: GoogleFonts.montserrat(fontSize: 12),
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 8),
             TextFormField(
               controller: _restockBuyPriceController,
-              decoration: InputDecoration(labelText: 'New Buy Price'),
+              decoration: InputDecoration(
+                labelText: 'New Buy Price',
+                labelStyle: GoogleFonts.montserrat(fontSize: 12),
+                hintStyle: GoogleFonts.montserrat(fontSize: 12),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
+                ),
+              ),
+              style: GoogleFonts.montserrat(fontSize: 12),
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 8),
             TextFormField(
               controller: _restockSellPriceController,
-              decoration: InputDecoration(labelText: 'New Sell Price'),
+              decoration: InputDecoration(
+                labelText: 'New Sell Price',
+                labelStyle: GoogleFonts.montserrat(fontSize: 12),
+                hintStyle: GoogleFonts.montserrat(fontSize: 12),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
+                ),
+              ),
+              style: GoogleFonts.montserrat(fontSize: 12),
               keyboardType: TextInputType.number,
             ),
           ],
@@ -104,6 +139,10 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              textStyle: GoogleFonts.montserrat(fontSize: 12),
+            ),
             child: Text('Cancel'),
           ),
           ElevatedButton(
@@ -134,7 +173,10 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
               Navigator.of(context).pop();
               showAppSnackBar(context, 'Medicine restocked successfully');
             },
-            child: Text('Restock'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            ),
+            child: Text('Restock', style: GoogleFonts.montserrat(fontSize: 12)),
           ),
         ],
       ),
@@ -152,29 +194,75 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
       builder: (context) => AlertDialog(
         title: Text(
           'Update Medicine',
-          style: GoogleFonts.montserrat(fontWeight: FontWeight.w600),
+          style: GoogleFonts.montserrat(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             TextFormField(
               controller: nameController,
-              decoration: InputDecoration(labelText: 'Medicine Name'),
+              decoration: InputDecoration(
+                labelText: 'Medicine Name',
+                labelStyle: GoogleFonts.montserrat(fontSize: 12),
+                hintStyle: GoogleFonts.montserrat(fontSize: 12),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
+                ),
+              ),
+              style: GoogleFonts.montserrat(fontSize: 12),
               textCapitalization: TextCapitalization.words,
             ),
+            const SizedBox(height: 8),
             TextFormField(
               controller: _restockQtyController,
-              decoration: InputDecoration(labelText: 'Quantity'),
+              decoration: InputDecoration(
+                labelText: 'Quantity',
+                labelStyle: GoogleFonts.montserrat(fontSize: 12),
+                hintStyle: GoogleFonts.montserrat(fontSize: 12),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
+                ),
+              ),
+              style: GoogleFonts.montserrat(fontSize: 12),
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 8),
             TextFormField(
               controller: _restockBuyPriceController,
-              decoration: InputDecoration(labelText: 'Buy Price'),
+              decoration: InputDecoration(
+                labelText: 'Buy Price',
+                labelStyle: GoogleFonts.montserrat(fontSize: 12),
+                hintStyle: GoogleFonts.montserrat(fontSize: 12),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
+                ),
+              ),
+              style: GoogleFonts.montserrat(fontSize: 12),
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 8),
             TextFormField(
               controller: _restockSellPriceController,
-              decoration: InputDecoration(labelText: 'Sell Price'),
+              decoration: InputDecoration(
+                labelText: 'Sell Price',
+                labelStyle: GoogleFonts.montserrat(fontSize: 12),
+                hintStyle: GoogleFonts.montserrat(fontSize: 12),
+                isDense: true,
+                contentPadding: const EdgeInsets.symmetric(
+                  vertical: 8,
+                  horizontal: 12,
+                ),
+              ),
+              style: GoogleFonts.montserrat(fontSize: 12),
               keyboardType: TextInputType.number,
             ),
           ],
@@ -182,6 +270,10 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              textStyle: GoogleFonts.montserrat(fontSize: 12),
+            ),
             child: Text('Cancel'),
           ),
           ElevatedButton(
@@ -220,7 +312,10 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
               Navigator.of(context).pop();
               showAppSnackBar(context, 'Medicine updated successfully');
             },
-            child: Text('Update'),
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            ),
+            child: Text('Update', style: GoogleFonts.montserrat(fontSize: 12)),
           ),
         ],
       ),
@@ -230,7 +325,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
   Widget _buildBadge(String label, String value) {
     final theme = Theme.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
         color: theme.colorScheme.primary.withValues(alpha: 0.07),
         borderRadius: BorderRadius.circular(8),
@@ -238,7 +333,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
       child: Text(
         '$label: $value',
         style: GoogleFonts.montserrat(
-          fontSize: 12,
+          fontSize: 10,
           fontWeight: FontWeight.w600,
           color: theme.colorScheme.onSurface,
         ),
@@ -253,7 +348,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
     Color color,
   ) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
@@ -264,13 +359,13 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
         children: [
           Row(
             children: [
-              Icon(icon, color: color, size: 20),
-              SizedBox(width: 8),
+              Icon(icon, color: color, size: 18),
+              SizedBox(width: 6),
               Expanded(
                 child: Text(
                   title,
                   style: GoogleFonts.montserrat(
-                    fontSize: 12,
+                    fontSize: 11,
                     fontWeight: FontWeight.w500,
                     color: color,
                   ),
@@ -278,11 +373,11 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
               ),
             ],
           ),
-          SizedBox(height: 8),
+          SizedBox(height: 6),
           Text(
             value,
             style: GoogleFonts.montserrat(
-              fontSize: 16,
+              fontSize: 14,
               fontWeight: FontWeight.w700,
               color: color,
             ),
@@ -633,8 +728,8 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
                             child: _currentMedicine.imageBytes != null
                                 ? Image.memory(
                                     _currentMedicine.imageBytes!,
-                                    width: 120,
-                                    height: 120,
+                                    width: 110,
+                                    height: 110,
                                     fit: BoxFit.cover,
                                   )
                                 : Container(
@@ -659,7 +754,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
                                 Text(
                                   _currentMedicine.name,
                                   style: GoogleFonts.montserrat(
-                                    fontSize: 20,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.w700,
                                     color: textColor,
                                   ),
@@ -770,7 +865,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
                               Text(
                                 'Financial Analytics',
                                 style: GoogleFonts.montserrat(
-                                  fontSize: 18,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color: textColor,
                                 ),
@@ -849,7 +944,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
                           Text(
                             'Profit Trend (Last 7 Days)',
                             style: GoogleFonts.montserrat(
-                              fontSize: 16,
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: textColor,
                             ),
@@ -887,7 +982,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
                               Text(
                                 'Recent Sales',
                                 style: GoogleFonts.montserrat(
-                                  fontSize: 18,
+                                  fontSize: 14,
                                   fontWeight: FontWeight.w600,
                                   color: textColor,
                                 ),
@@ -900,7 +995,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
                                   child: Text(
                                     'No sales recorded yet',
                                     style: GoogleFonts.montserrat(
-                                      fontSize: 14,
+                                      fontSize: 12,
                                       color: hintColor,
                                     ),
                                   ),
@@ -938,21 +1033,21 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
                                                 'MMM dd, yyyy HH:mm',
                                               ).format(report.dateTime),
                                               style: GoogleFonts.montserrat(
-                                                fontSize: 14,
+                                                fontSize: 10,
                                                 fontWeight: FontWeight.w500,
                                               ),
                                             ),
                                             subtitle: Text(
                                               'Qty: ${report.soldQty} × ${report.sellPrice} Birr',
                                               style: GoogleFonts.montserrat(
-                                                fontSize: 12,
+                                                fontSize: 10,
                                                 color: hintColor,
                                               ),
                                             ),
                                             trailing: Text(
                                               '${report.totalGain} Birr',
                                               style: GoogleFonts.montserrat(
-                                                fontSize: 14,
+                                                fontSize: 12,
                                                 fontWeight: FontWeight.w600,
                                                 color: Colors.green,
                                               ),
@@ -965,7 +1060,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
                                     Text(
                                       'Sales Chart (Last 7 Days)',
                                       style: GoogleFonts.montserrat(
-                                        fontSize: 16,
+                                        fontSize: 12,
                                         fontWeight: FontWeight.w600,
                                         color: textColor,
                                       ),
@@ -994,7 +1089,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
                           Text(
                             'Details',
                             style: GoogleFonts.montserrat(
-                              fontSize: 16,
+                              fontSize: 14,
                               fontWeight: FontWeight.w600,
                               color: textColor,
                             ),
@@ -1003,7 +1098,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
                           Text(
                             'No extra details available.',
                             style: GoogleFonts.montserrat(
-                              fontSize: 14,
+                              fontSize: 12,
                               color: textColor.withValues(alpha: 0.8),
                             ),
                           ),
@@ -1038,29 +1133,39 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
                         decoration: InputDecoration(
                           labelText: 'Quantity',
                           labelStyle: GoogleFonts.montserrat(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: hintColor,
                           ),
                           isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 12,
+                          ),
                         ),
+                        style: GoogleFonts.montserrat(fontSize: 12),
                         keyboardType: TextInputType.number,
                       ),
                     ),
-                    SizedBox(width: 12),
+                    SizedBox(width: 8),
                     SizedBox(
-                      width: 120,
+                      width: 100,
                       child: TextFormField(
                         controller: _sellPriceController,
                         decoration: InputDecoration(
                           labelText: 'Price',
                           labelStyle: GoogleFonts.montserrat(
-                            fontSize: 14,
+                            fontSize: 12,
                             fontWeight: FontWeight.w500,
                             color: hintColor,
                           ),
                           isDense: true,
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 8,
+                            horizontal: 12,
+                          ),
                         ),
+                        style: GoogleFonts.montserrat(fontSize: 12),
                         keyboardType: TextInputType.number,
                       ),
                     ),
@@ -1071,10 +1176,13 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
                   width: double.infinity,
                   child: ElevatedButton(
                     onPressed: _addToReport,
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
                     child: Text(
                       'Add to Report',
                       style: GoogleFonts.montserrat(
-                        fontSize: 16,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: theme.colorScheme.onPrimary,
                       ),

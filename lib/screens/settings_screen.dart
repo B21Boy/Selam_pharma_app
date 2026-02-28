@@ -4,7 +4,9 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:provider/provider.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
+import '../services/local_auth.dart';
 import '../services/notification_service.dart';
 import '../providers/pharmacy_provider.dart';
 import '../providers/theme_provider.dart';
@@ -44,7 +46,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    // smaller text styles for compact layout
+    final headerStyle = GoogleFonts.montserrat(
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+    );
+    final titleStyle = GoogleFonts.montserrat(fontSize: 12);
+    final subtitleStyle = GoogleFonts.montserrat(fontSize: 10);
 
     return Scaffold(
       appBar: AppBar(
@@ -58,7 +66,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 8),
 
             // Appearance
-            Text('Appearance', style: theme.textTheme.titleMedium),
+            Text('Appearance', style: headerStyle),
             const SizedBox(height: 8),
             Card(
               elevation: 0,
@@ -79,7 +87,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           RadioListTile<String>(
                             value: 'light',
                             groupValue: groupValue,
-                            title: const Text('Light'),
+                            title: Text('Light', style: titleStyle),
                             onChanged: (v) {
                               if (v == null) return;
                               context.read<ThemeProvider>().setDark(false);
@@ -88,7 +96,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           RadioListTile<String>(
                             value: 'dark',
                             groupValue: groupValue,
-                            title: const Text('Dark'),
+                            title: Text('Dark', style: titleStyle),
                             onChanged: (v) {
                               if (v == null) return;
                               context.read<ThemeProvider>().setDark(true);
@@ -105,7 +113,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 12),
 
             // Notifications
-            Text('Notifications', style: theme.textTheme.titleMedium),
+            Text('Notifications', style: headerStyle),
             const SizedBox(height: 8),
             Card(
               elevation: 0,
@@ -117,13 +125,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   SwitchListTile(
                     value: _notificationsEnabled,
                     onChanged: (v) => setState(() => _notificationsEnabled = v),
-                    title: const Text('Enable notifications'),
-                    subtitle: const Text('Show notifications and badges'),
+                    title: Text('Enable notifications', style: titleStyle),
+                    subtitle: Text(
+                      'Show notifications and badges',
+                      style: subtitleStyle,
+                    ),
                   ),
                   SwitchListTile(
                     value: _badgeEnabled,
                     onChanged: (v) => setState(() => _badgeEnabled = v),
-                    title: const Text('Show badges'),
+                    title: Text('Show badges', style: titleStyle),
                   ),
                   SwitchListTile(
                     value: _trashNotificationsEnabled,
@@ -188,9 +199,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         }
                       }
                     },
-                    title: const Text('Trash expiry notifications'),
-                    subtitle: const Text(
+                    title: Text(
+                      'Trash expiry notifications',
+                      style: titleStyle,
+                    ),
+                    subtitle: Text(
                       'Notify when trashed items are about to be permanently deleted',
+                      style: subtitleStyle,
                     ),
                   ),
                 ],
@@ -200,7 +215,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 12),
 
             // Account / Security
-            Text('Privacy & Security', style: theme.textTheme.titleMedium),
+            Text('Privacy & Security', style: headerStyle),
             const SizedBox(height: 8),
             Card(
               elevation: 0,
@@ -212,7 +227,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   SwitchListTile(
                     value: _biometricEnabled,
                     onChanged: (v) => setState(() => _biometricEnabled = v),
-                    title: const Text('Use biometric unlock'),
+                    title: Text('Use biometric unlock', style: titleStyle),
                   ),
                 ],
               ),
@@ -221,7 +236,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 12),
 
             // Data & Storage
-            Text('Data & Storage', style: theme.textTheme.titleMedium),
+            Text('Data & Storage', style: headerStyle),
             const SizedBox(height: 8),
             Card(
               elevation: 0,
@@ -232,8 +247,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   ListTile(
                     leading: const Icon(Icons.file_download_outlined),
-                    title: const Text('Export data'),
-                    subtitle: const Text('Export CSV / JSON'),
+                    title: Text('Export data', style: titleStyle),
+                    subtitle: Text('Export CSV / JSON', style: subtitleStyle),
                     onTap: () {
                       // TODO: implement export
                       showAppSnackBar(context, 'Export started');
@@ -241,22 +256,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.delete_outline),
-                    title: const Text('Clear cache'),
+                    title: Text('Clear cache', style: titleStyle),
                     onTap: () async {
                       final ok = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
-                          title: const Text('Clear cache?'),
-                          content: const Text(
+                          title: Text('Clear cache?', style: headerStyle),
+                          content: Text(
                             'This will remove temporary data. Continue?',
+                            style: titleStyle,
                           ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(false),
+                              style: TextButton.styleFrom(
+                                textStyle: titleStyle,
+                              ),
                               child: const Text('Cancel'),
                             ),
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(true),
+                              style: TextButton.styleFrom(
+                                textStyle: titleStyle,
+                              ),
                               child: const Text('Clear'),
                             ),
                           ],
@@ -275,7 +297,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SizedBox(height: 12),
 
             // Account actions
-            Text('Account', style: theme.textTheme.titleMedium),
+            Text('Account', style: headerStyle),
             const SizedBox(height: 8),
             Card(
               elevation: 0,
@@ -286,8 +308,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 children: [
                   ListTile(
                     leading: const Icon(Icons.logout_outlined),
-                    title: const Text('Logout'),
-                    subtitle: const Text('Sign out of this account'),
+                    title: Text('Logout', style: titleStyle),
+                    subtitle: Text(
+                      'Sign out of this account',
+                      style: subtitleStyle,
+                    ),
                     onTap: () async {
                       try {
                         await AuthService().signOut();
@@ -307,23 +332,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   ListTile(
                     leading: const Icon(Icons.person_remove_outlined),
-                    title: const Text('Delete account'),
-                    subtitle: const Text('Permanently delete account and data'),
+                    title: Text('Delete account', style: titleStyle),
+                    subtitle: Text(
+                      'Permanently delete account and data',
+                      style: subtitleStyle,
+                    ),
                     onTap: () async {
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
-                          title: const Text('Delete account?'),
-                          content: const Text(
+                          title: Text('Delete account?', style: headerStyle),
+                          content: Text(
                             'This will permanently delete your account and associated cloud data. This cannot be undone. Continue?',
+                            style: titleStyle,
                           ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(false),
+                              style: TextButton.styleFrom(
+                                textStyle: titleStyle,
+                              ),
                               child: const Text('Cancel'),
                             ),
                             TextButton(
                               onPressed: () => Navigator.of(context).pop(true),
+                              style: TextButton.styleFrom(
+                                textStyle: titleStyle,
+                              ),
                               child: const Text('Delete'),
                             ),
                           ],
@@ -341,6 +376,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                       try {
                         await AuthService().deleteAccount();
+                        // also clear any cached local credentials since the
+                        // account is gone
+                        try {
+                          await LocalAuth.clearAll();
+                        } catch (_) {}
                         if (!mounted) return;
                         Navigator.of(context).pop(); // pop progress
                         Navigator.of(
@@ -363,7 +403,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
 
             // About
-            Text('About', style: theme.textTheme.titleMedium),
+            Text('About', style: headerStyle),
             const SizedBox(height: 8),
             Card(
               elevation: 0,
@@ -371,11 +411,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
-                children: const [
+                children: [
                   ListTile(
-                    leading: Icon(Icons.info_outline),
-                    title: Text('About this app'),
-                    subtitle: Text('Version 1.0.0'),
+                    leading: const Icon(Icons.info_outline),
+                    title: Text('About this app', style: titleStyle),
+                    subtitle: Text('Version 1.0.0', style: subtitleStyle),
                   ),
                 ],
               ),

@@ -157,7 +157,7 @@ class _AuditScreenState extends State<AuditScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Summary Cards
+                // Summary Cards: revenue & items sold
                 Row(
                   children: [
                     Expanded(
@@ -180,6 +180,20 @@ class _AuditScreenState extends State<AuditScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
+                // center single Top Medicine card on its own row
+                Center(
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.5,
+                    child: _buildSummaryCard(
+                      'Top Medicine',
+                      summary['topMedicine'],
+                      Icons.star,
+                      Colors.purple,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                // unique medicines and total profit on bottom row
                 Row(
                   children: [
                     Expanded(
@@ -188,15 +202,6 @@ class _AuditScreenState extends State<AuditScreen> {
                         '${summary['uniqueMedicines']}',
                         Icons.medical_services,
                         Colors.orange,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildSummaryCard(
-                        'Top Medicine',
-                        summary['topMedicine'],
-                        Icons.star,
-                        Colors.purple,
                       ),
                     ),
                     const SizedBox(width: 8),

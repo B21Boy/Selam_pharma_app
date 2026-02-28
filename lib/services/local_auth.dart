@@ -24,6 +24,18 @@ class LocalAuth {
     });
   }
 
+  /// Remove all locally stored accounts. Called on explicit sign‑out/delete.
+  static Future<void> clearAll() async {
+    final box = await Hive.openBox(_boxName);
+    await box.clear();
+  }
+
+  /// Delete a single account entry by email (case insensitive).
+  static Future<void> deleteAccount(String email) async {
+    final box = await Hive.openBox(_boxName);
+    await box.delete(email.toLowerCase());
+  }
+
   /// Verify credentials against locally stored account. Returns true if match.
   static Future<bool> verifyCredentials(String email, String password) async {
     final box = await Hive.openBox(_boxName);
