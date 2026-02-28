@@ -11,6 +11,7 @@ import '../services/ai_service.dart';
 class PharmacyProvider extends ChangeNotifier {
   Box<Medicine>? _medicineBox;
   Box<Medicine>? _trashBox;
+  Box<Report>? _reportTrashBox;
   Box<Report>? _reportBox;
   StreamSubscription<User?>? _authSub;
 
@@ -78,12 +79,30 @@ class PharmacyProvider extends ChangeNotifier {
       _trashBox = await Hive.openBox<Medicine>(boxName);
     }
 
-    // Remove associated reports to avoid orphaned references.
-    final reportsToDelete = _reports
+    // Move associated reports to a per-user reports trash box so they can
+    // be restored together with the medicine.
+    if (_reportTrashBox == null || !(_reportTrashBox?.isOpen ?? false)) {
+      final boxName = _reportBox?.name != null
+          ? '${_reportBox!.name}_trash'
+          : 'reports_trash';
+      _reportTrashBox = await Hive.openBox<Report>(boxName);
+    }
+    final reportsToMove = _reports
         .where((report) => report.medicineName == medicine.name)
         .toList();
-    for (final report in reportsToDelete) {
-      await report.delete();
+    for (final report in reportsToMove) {
+      try {
+        final clone = Report(
+          medicineName: report.medicineName,
+          soldQty: report.soldQty,
+          sellPrice: report.sellPrice,
+          totalGain: report.totalGain,
+          dateTime: report.dateTime,
+          isRead: report.isRead,
+        );
+        await _reportTrashBox?.add(clone);
+        await report.delete();
+      } catch (_) {}
     }
 
     // Mark deletion time and move a cloned medicine to trash
@@ -154,10 +173,10 @@ class PharmacyProvider extends ChangeNotifier {
   /// Returns list of medicines currently in trash.
   List<Medicine> get trashedMedicines => _trashBox?.values.toList() ?? [];
 
-  Future<void> restoreMedicineFromTrash(String id) async {
-    if (_trashBox == null || !(_trashBox?.isOpen ?? false)) return;
+  Future<int> restoreMedicineFromTrash(String id) async {
+    if (_trashBox == null || !(_trashBox?.isOpen ?? false)) return 0;
     final med = _trashBox?.get(id);
-    if (med == null) return;
+    if (med == null) return 0;
     // create a fresh copy for the main medicines box
     final restored = Medicine(
       id: med.id,
@@ -181,6 +200,35 @@ class PharmacyProvider extends ChangeNotifier {
     try {
       await NotificationService.instance.cancelFor(id);
     } catch (_) {}
+
+    // Restore associated reports from the per-user reports trash box.
+    try {
+      if (_reportTrashBox == null || !(_reportTrashBox?.isOpen ?? false)) {
+        final boxName = _reportBox?.name != null
+            ? '${_reportBox!.name}_trash'
+            : 'reports_trash';
+        _reportTrashBox = await Hive.openBox<Report>(boxName);
+      }
+      final toRestore = _reportTrashBox!.values
+          .where((r) => r.medicineName == restored.name)
+          .toList();
+      final restoredCount = toRestore.length;
+      for (final r in toRestore) {
+        final clone = Report(
+          medicineName: r.medicineName,
+          soldQty: r.soldQty,
+          sellPrice: r.sellPrice,
+          totalGain: r.totalGain,
+          dateTime: r.dateTime,
+          isRead: r.isRead,
+        );
+        await _reportBox?.add(clone);
+        await r.delete();
+      }
+      await loadData();
+      return restoredCount;
+    } catch (_) {}
+    return 0;
   }
 
   Future<void> permanentlyDeleteFromTrash(String id) async {

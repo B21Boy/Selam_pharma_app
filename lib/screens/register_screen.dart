@@ -60,9 +60,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    if (_passCtrl.text != _confirmCtrl.text) {
-      return _showError('Passwords do not match');
-    }
     setState(() => _loading = true);
     try {
       debugPrint('Attempting to create user: ${_emailCtrl.text.trim()}');

@@ -38,15 +38,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (mounted) {
       setState(() => _inlineError = message);
     }
-    // also show a short, themed SnackBar for accessibility (only while mounted)
-    if (mounted) {
-      showAppSnackBar(
-        context,
-        message,
-        error: true,
-        duration: const Duration(seconds: 4),
-      );
-    }
+    // Note: do not show a SnackBar here to avoid duplicate error messages;
+    // the inline banner at the bottom of the form is the primary error UI.
 
     // auto-clear inline banner after a short delay (cancel previous timer)
     _inlineErrorTimer?.cancel();
@@ -186,6 +179,24 @@ class _LoginScreenState extends State<LoginScreen> {
         'Sign-in exception: ${isPigeonTypeError ? 'platform/plugin type error' : e}',
       );
 
+      // Some platforms/plugins return raw credential errors like
+      // "The supplied auth credential is malformed or expired" — map those
+      // to a friendly password error and show it under the password field.
+      final errLower = errText.toLowerCase();
+      if (errLower.contains('supplied auth credential') ||
+          errLower.contains('malformed') ||
+          errLower.contains('expired') ||
+          errLower.contains('invalid credential')) {
+        if (mounted) {
+          setState(() {
+            _passwordError = 'Incorrect password.';
+            _inlineError = null;
+            _emailError = null;
+          });
+        }
+        return;
+      }
+
       // If the platform layer threw a pigeon/type error but the sign-in actually
       // succeeded on the backend, FirebaseAuth.instance.currentUser may be set.
       final uCheck = FirebaseAuth.instance.currentUser;
@@ -232,17 +243,40 @@ class _LoginScreenState extends State<LoginScreen> {
       if (e is FirebaseAuthException) {
         switch (e.code) {
           case 'user-not-found':
-            setState(() => _emailError = 'No account found for this email');
+            if (mounted) {
+              setState(() {
+                _emailError = 'No account found for this email.';
+                _inlineError = null;
+                _passwordError = null;
+              });
+            }
             break;
           case 'wrong-password':
-            setState(() => _passwordError = 'Incorrect password');
+            if (mounted) {
+              setState(() {
+                _passwordError = 'Incorrect password.';
+                _inlineError = null;
+                _emailError = null;
+              });
+            }
+            break;
+          case 'network-request-failed':
+            if (mounted) {
+              setState(() {
+                _emailError = null;
+                _passwordError = null;
+              });
+            }
+            _displayError(
+              'Network error. Please check your internet connection.',
+            );
             break;
           default:
             _showError(e);
         }
       } else {
         final dialogMsg = isPigeonTypeError
-            ? 'Internal platform error occurred during sign-in. This can happen when Firebase plugins are out of sync. Try running `flutter pub upgrade` and rebuilding the app.'
+            ? 'Internal platform error occurred during sign-in. This can happen when Firebase plugins are out of sync. Try running flutter pub upgrade and rebuild the app.'
             : e.toString();
 
         if (mounted) {
@@ -381,47 +415,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Inline error banner
-                          if (_inlineError != null)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 12.0),
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.error,
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 10,
-                                ),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.error_outline,
-                                      color: Colors.white,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        _inlineError!,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.close,
-                                        color: Colors.white70,
-                                      ),
-                                      onPressed: () =>
-                                          setState(() => _inlineError = null),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                          // (Moved) inline error banner will be shown below form fields
                           // Toggle row (Login / Sign In) simplified
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -479,6 +473,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               hintText: 'Email',
                               hintStyle: TextStyle(fontSize: 12),
                               errorText: _emailError,
+                              errorStyle: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 12,
+                              ),
                               isDense: true,
                               contentPadding: const EdgeInsets.symmetric(
                                 vertical: 8,
@@ -489,13 +487,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             keyboardType: TextInputType.emailAddress,
                             validator: (v) {
                               if (v == null || v.trim().isEmpty) {
-                                return 'Enter an email';
+                                return 'Please enter your email.';
                               }
                               final email = v.trim();
                               final re = RegExp(r"^[^@\s]+@[^@\s]+\.[^@\s]+$");
-                              return re.hasMatch(email)
-                                  ? null
-                                  : 'Enter a valid email';
+                              if (!re.hasMatch(email)) {
+                                return 'Please enter a valid email address.';
+                              }
+                              return null;
                             },
                           ),
 
@@ -510,6 +509,10 @@ class _LoginScreenState extends State<LoginScreen> {
                               hintText: 'Password',
                               hintStyle: TextStyle(fontSize: 12),
                               errorText: _passwordError,
+                              errorStyle: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 12,
+                              ),
                               isDense: true,
                               contentPadding: const EdgeInsets.symmetric(
                                 vertical: 8,
@@ -544,14 +547,14 @@ class _LoginScreenState extends State<LoginScreen> {
                             obscureText: _obscurePassword,
                             validator: (v) {
                               if (v == null || v.isEmpty) {
-                                return 'Enter a password';
+                                return 'Please enter your password.';
                               }
                               if (v.length < 6) {
-                                return 'Password too short';
+                                return 'Password must be at least 6 characters.';
                               }
                               final hasDigit = RegExp(r"[0-9]").hasMatch(v);
                               if (!hasDigit) {
-                                return 'Password must include a number (0-9)';
+                                return 'Password must include a number.';
                               }
                               return null;
                             },
@@ -630,6 +633,48 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
 
                           SizedBox(height: 12),
+
+                          // inline error message below the form fields
+                          if (_inlineError != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 12.0),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.error,
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 10,
+                                ),
+                                child: Row(
+                                  children: [
+                                    const Icon(
+                                      Icons.error_outline,
+                                      color: Colors.white,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        _inlineError!,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.close,
+                                        color: Colors.white70,
+                                      ),
+                                      onPressed: () =>
+                                          setState(() => _inlineError = null),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
 
                           TextButton(
                             onPressed: () =>

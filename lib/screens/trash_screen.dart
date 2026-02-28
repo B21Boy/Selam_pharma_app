@@ -38,8 +38,19 @@ class _TrashScreenState extends State<TrashScreen> {
         false;
     if (!ok) return;
     setState(() => _loading = true);
-    await prov.restoreMedicineFromTrash(med.id);
+    final restoredReports = await prov.restoreMedicineFromTrash(med.id);
     setState(() => _loading = false);
+    if (mounted) {
+      if (restoredReports > 0) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Restored ${med.name} and $restoredReports report(s)')),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Restored ${med.name}')),
+        );
+      }
+    }
   }
 
   Future<void> _confirmPermanentDelete(
@@ -91,14 +102,22 @@ class _TrashScreenState extends State<TrashScreen> {
                       ? null
                       : () async {
                           setState(() => _loading = true);
+                          final selectionCount = _selected.length;
+                          var totalRestoredReports = 0;
                           for (final id in _selected.toList()) {
-                            await prov.restoreMedicineFromTrash(id);
+                            final cnt = await prov.restoreMedicineFromTrash(id);
+                            totalRestoredReports += cnt;
                           }
                           _selected.clear();
                           setState(() {
                             _selectionMode = false;
                             _loading = false;
                           });
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Restored $selectionCount item(s) and $totalRestoredReports report(s)')),
+                            );
+                          }
                         },
                 ),
                 IconButton(

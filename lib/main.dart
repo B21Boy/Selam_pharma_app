@@ -32,6 +32,14 @@ void main() async {
   Hive.registerAdapter(MedicineAdapter());
   Hive.registerAdapter(ReportAdapter());
 
+  // chat box is used to cache conversation while the app is running.  We
+  // clear it on startup so that any messages left over from a previous run
+  // are discarded; this satisfies the requirement that the data only live
+  // "until the app is closed".  Messages added during the session are
+  // written to the box and will survive navigation between pages.
+  final chatBox = await Hive.openBox('chat');
+  await chatBox.clear();
+
   // Start background sync between Hive, Firestore and Cloudinary
   // We'll create and initialize SyncService here so it starts after Firebase init.
   SyncService? syncService;
