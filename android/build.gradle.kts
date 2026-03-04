@@ -1,3 +1,6 @@
+import com.android.build.gradle.LibraryExtension
+import com.android.build.gradle.AppExtension
+
 allprojects {
     repositories {
         google()
@@ -21,6 +24,7 @@ plugins {
 }
 subprojects {
     project.evaluationDependsOn(":app")
+
 }
 
 tasks.register<Delete>("clean") {

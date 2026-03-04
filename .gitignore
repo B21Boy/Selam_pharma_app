@@ -36,6 +36,11 @@ migrate_working_dir/
 # Local environment for secrets
 .env
 
+# Ignore generated web env file and Android keystore
+web/env.js
+android/key.jks
+android/key.properties
+
 # Symbolication related
 app.*.symbols
 

@@ -43,12 +43,16 @@ class _TrashScreenState extends State<TrashScreen> {
     if (mounted) {
       if (restoredReports > 0) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Restored ${med.name} and $restoredReports report(s)')),
+          SnackBar(
+            content: Text(
+              'Restored ${med.name} and $restoredReports report(s)',
+            ),
+          ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Restored ${med.name}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Restored ${med.name}')));
       }
     }
   }
@@ -101,6 +105,7 @@ class _TrashScreenState extends State<TrashScreen> {
                   onPressed: _selected.isEmpty
                       ? null
                       : () async {
+                          final messenger = ScaffoldMessenger.of(context);
                           setState(() => _loading = true);
                           final selectionCount = _selected.length;
                           var totalRestoredReports = 0;
@@ -113,11 +118,13 @@ class _TrashScreenState extends State<TrashScreen> {
                             _selectionMode = false;
                             _loading = false;
                           });
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Restored $selectionCount item(s) and $totalRestoredReports report(s)')),
-                            );
-                          }
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Restored $selectionCount item(s) and $totalRestoredReports report(s)',
+                              ),
+                            ),
+                          );
                         },
                 ),
                 IconButton(
@@ -179,7 +186,7 @@ class _TrashScreenState extends State<TrashScreen> {
           : ListView.separated(
               padding: const EdgeInsets.all(12),
               itemCount: trashed.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemBuilder: (ctx, i) {
                 final med = trashed[i];
                 final daysLeft = prov.daysLeftInTrash(med);

@@ -17,13 +17,17 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _usernameCtrl = TextEditingController(); // only used for registration
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController(); // only used for registration
   final AuthService _auth = AuthService();
   bool _loading = false;
+  bool _isRegister = false; // toggle between login / register modes
   String? _emailError;
   String? _passwordError;
   bool _obscurePassword = true;
+  bool _obscureConfirm = true; // registration field
   String? _inlineError;
   Timer? _inlineErrorTimer;
 
@@ -51,8 +55,10 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void dispose() {
     _inlineErrorTimer?.cancel();
+    _usernameCtrl.dispose();
     _emailCtrl.dispose();
     _passCtrl.dispose();
+    _confirmCtrl.dispose();
     super.dispose();
   }
 
@@ -65,6 +71,69 @@ class _LoginScreenState extends State<LoginScreen> {
         _passwordError = null;
       });
     }
+
+    if (_isRegister) {
+      // registration flow
+      debugPrint(
+        'LoginScreen._submit: attempt register for ${_emailCtrl.text.trim()}',
+      );
+      try {
+        final cred = await _auth.registerWithEmail(
+          _emailCtrl.text.trim(),
+          _passCtrl.text,
+        );
+        final u = cred.user;
+        if (u == null) {
+          throw FirebaseAuthException(
+            code: 'user-creation-failed',
+            message: 'User creation returned no user object',
+          );
+        }
+        // create firestore profile and save local account
+        try {
+          final uid = u.uid;
+          await FirestoreService.set('users/$uid', {
+            'email': _emailCtrl.text.trim(),
+            'role': 'user',
+            'displayName': _usernameCtrl.text.trim(),
+            'username': _usernameCtrl.text.trim(),
+            'createdAt': DateTime.now().toUtc().toIso8601String(),
+          });
+          debugPrint('Created Firestore profile for user $uid');
+          await LocalAuth.saveAccount(
+            email: _emailCtrl.text.trim(),
+            username: _usernameCtrl.text.trim(),
+            password: _passCtrl.text,
+          );
+          debugPrint('Saved account to Hive for offline login');
+        } catch (e) {
+          debugPrint('Profile/local save error: $e');
+        }
+        // sign out so user can login
+        try {
+          await _auth.signOut();
+        } catch (_) {}
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account created. Please sign in.')),
+        );
+        // flip back to login mode and clear fields
+        if (mounted) {
+          setState(() {
+            _isRegister = false;
+            _usernameCtrl.clear();
+            _confirmCtrl.clear();
+          });
+        }
+      } catch (e) {
+        _showError(e);
+      } finally {
+        if (mounted) setState(() => _loading = false);
+      }
+      return;
+    }
+
+    // --- login flow continues here ---
     debugPrint(
       'LoginScreen._submit: attempt sign-in for ${_emailCtrl.text.trim()}',
     );
@@ -132,7 +201,9 @@ class _LoginScreenState extends State<LoginScreen> {
           }
 
           if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
+          // Guard against using context after async gaps.
+          final messenger = ScaffoldMessenger.of(context);
+          messenger.showSnackBar(
             SnackBar(
               content: Text(
                 'Signed in as ${u.email}',
@@ -163,6 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
             debugPrint('Failed to save local account after sign-in: $localErr');
           }
 
+          if (!mounted) return;
           Navigator.of(context).pushAndRemoveUntil(
             MaterialPageRoute(builder: (_) => HomeScreen()),
             (route) => false,
@@ -322,7 +394,16 @@ class _LoginScreenState extends State<LoginScreen> {
       if (e is AccountExistsWithDifferentCredential) {
         await _showLinkDialog(e.email);
       } else {
-        _showError(e);
+        final msg = e.toString();
+        if (msg.contains('Google Sign-In not configured')) {
+          // more actionable message
+          _displayError(
+            'Google Sign-In is not configured. '
+            'Please see the project README/GOOGLE_SIGNIN.md for setup instructions.',
+          );
+        } else {
+          _showError(e);
+        }
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -379,6 +460,42 @@ class _LoginScreenState extends State<LoginScreen> {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
+    // helper for consistent input decoration
+    InputDecoration inputDecoration({
+      required String hint,
+      String? errorText,
+      Widget? suffixIcon,
+    }) {
+      return InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(fontSize: 14),
+        errorText: errorText,
+        errorStyle: const TextStyle(color: Colors.red, fontSize: 12),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: cs.onSurface.withAlpha((0.06 * 255).round()),
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: cs.onSurface.withAlpha((0.06 * 255).round()),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: cs.primary),
+        ),
+        suffixIcon: suffixIcon,
+      );
+    }
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
@@ -389,13 +506,15 @@ class _LoginScreenState extends State<LoginScreen> {
               // Top curved header (compact)
               AuthHeader(
                 title: 'Drug Store',
-                subtitle: 'Welcome back! please login to your account',
+                subtitle: _isRegister
+                    ? 'Create a new account'
+                    : 'Welcome back! please login to your account',
                 height: 160,
-                titleFontSize: 20,
-                subtitleFontSize: 12,
+                titleFontSize: 27,
+                subtitleFontSize: 15,
               ),
 
-              SizedBox(height: 12),
+              SizedBox(height: 70),
 
               // Primary login button
               Padding(
@@ -416,48 +535,84 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           // (Moved) inline error banner will be shown below form fields
-                          // Toggle row (Login / Sign In) simplified
+                          // Toggle row (Login / Register) – switch form in place
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 260),
-                                transitionBuilder: (child, anim) =>
-                                    FadeTransition(
-                                      opacity: anim,
-                                      child: ScaleTransition(
-                                        scale: anim,
-                                        child: child,
-                                      ),
-                                    ),
+                              // login button
+                              GestureDetector(
+                                onTap: () {
+                                  if (_isRegister) {
+                                    setState(() {
+                                      _isRegister = false;
+                                      _emailError = null;
+                                      _passwordError = null;
+                                      _inlineError = null;
+                                      _usernameCtrl.clear();
+                                      _confirmCtrl.clear();
+                                    });
+                                  }
+                                },
                                 child: Container(
-                                  key: const ValueKey('active_login'),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 18,
                                     vertical: 8,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: cs.primary,
+                                    color: !_isRegister
+                                        ? cs.primary
+                                        : Colors.transparent,
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
                                     'Log In',
                                     style: TextStyle(
-                                      color: cs.onPrimary,
+                                      color: !_isRegister
+                                          ? cs.onPrimary
+                                          : cs.onSurface.withAlpha(
+                                              (0.7 * 255).round(),
+                                            ),
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
                               ),
                               const SizedBox(width: 12),
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.pushNamed(context, '/register'),
-                                child: Text(
-                                  'Register',
-                                  style: TextStyle(
-                                    color: cs.onSurface.withValues(alpha: 0.7),
-                                    fontWeight: FontWeight.w600,
+                              // register button
+                              GestureDetector(
+                                onTap: () {
+                                  if (!_isRegister) {
+                                    setState(() {
+                                      _isRegister = true;
+                                      _emailError = null;
+                                      _passwordError = null;
+                                      _inlineError = null;
+                                      _usernameCtrl.clear();
+                                      _confirmCtrl.clear();
+                                    });
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 18,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _isRegister
+                                        ? cs.primary
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    'Register',
+                                    style: TextStyle(
+                                      color: _isRegister
+                                          ? cs.onPrimary
+                                          : cs.onSurface.withAlpha(
+                                              (0.7 * 255).round(),
+                                            ),
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -466,24 +621,29 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           SizedBox(height: 18),
 
+                          // if we're registering show username first
+                          if (_isRegister) ...[
+                            TextFormField(
+                              controller: _usernameCtrl,
+                              decoration: inputDecoration(hint: 'Username'),
+                              style: const TextStyle(fontSize: 14),
+                              validator: (v) {
+                                if (v == null || v.trim().isEmpty) {
+                                  return 'Please enter a username.';
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+                          SizedBox(height: 12),
                           // Email
                           TextFormField(
                             controller: _emailCtrl,
-                            decoration: InputDecoration(
-                              hintText: 'Email',
-                              hintStyle: TextStyle(fontSize: 12),
+                            decoration: inputDecoration(
+                              hint: 'Email',
                               errorText: _emailError,
-                              errorStyle: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 12,
-                              ),
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 8,
-                                horizontal: 12,
-                              ),
                             ),
-                            style: TextStyle(fontSize: 12),
+                            style: const TextStyle(fontSize: 14),
                             keyboardType: TextInputType.emailAddress,
                             validator: (v) {
                               if (v == null || v.trim().isEmpty) {
@@ -560,9 +720,54 @@ class _LoginScreenState extends State<LoginScreen> {
                             },
                           ),
 
+                          // confirm password (shown only when registering)
+                          if (_isRegister) ...[
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _confirmCtrl,
+                              decoration: inputDecoration(
+                                hint: 'Confirm password',
+                                suffixIcon: AnimatedRotation(
+                                  turns: _obscureConfirm ? 0.0 : 0.5,
+                                  duration: const Duration(milliseconds: 220),
+                                  curve: Curves.easeInOut,
+                                  child: IconButton(
+                                    tooltip: _obscureConfirm
+                                        ? 'Show password'
+                                        : 'Hide password',
+                                    icon: Icon(
+                                      _obscureConfirm
+                                          ? Icons.visibility_off
+                                          : Icons.visibility,
+                                      color: cs.onSurface.withAlpha(
+                                        (0.65 * 255).round(),
+                                      ),
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureConfirm = !_obscureConfirm;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ),
+                              style: const TextStyle(fontSize: 14),
+                              obscureText: _obscureConfirm,
+                              validator: (v) {
+                                if (v == null || v.isEmpty) {
+                                  return 'Please confirm your password.';
+                                }
+                                if (v != _passCtrl.text) {
+                                  return 'Passwords do not match.';
+                                }
+                                return null;
+                              },
+                            ),
+                          ],
+
                           SizedBox(height: 18),
 
-                          // Primary login button (compact)
+                          // Primary action button
                           ElevatedButton(
                             onPressed: _loading ? null : _submit,
                             style: ElevatedButton.styleFrom(
@@ -583,22 +788,23 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                                   )
                                 : Text(
-                                    'Log In',
+                                    _isRegister ? 'Create account' : 'Log In',
                                     style: TextStyle(fontSize: 14),
                                   ),
                           ),
 
                           SizedBox(height: 12),
 
-                          // Forgot password (left aligned under login button)
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: TextButton(
-                              onPressed: () =>
-                                  Navigator.pushNamed(context, '/forgot'),
-                              child: Text('Forgot password?'),
+                          // Forgot password (only on login)
+                          if (!_isRegister)
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: TextButton(
+                                onPressed: () =>
+                                    Navigator.pushNamed(context, '/forgot'),
+                                child: Text('Forgot password?'),
+                              ),
                             ),
-                          ),
 
                           Center(
                             child: Text(

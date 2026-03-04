@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import 'package:provider/provider.dart';
 import '../providers/pharmacy_provider.dart';
 // theme toggling removed for home screen only
@@ -16,6 +17,15 @@ import '../widgets/app_drawer.dart';
 import '../widgets/custom_bottom_nav_bar.dart';
 // removed unused import
 import 'help_screen.dart';
+
+// route without any transition animation
+PageRouteBuilder<T> _noAnimRoute<T>(Widget page) {
+  return PageRouteBuilder(
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionDuration: Duration.zero,
+    reverseTransitionDuration: Duration.zero,
+  );
+}
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -578,23 +588,14 @@ class HomeScreenState extends State<HomeScreen> {
           });
         },
         onChat: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => ChatScreen()),
-          );
+          Navigator.of(context).push(_noAnimRoute(ChatScreen()));
         },
         onReports: () {
           pharmacyProvider.clearNewReportsNotification();
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => ReportScreen()),
-          );
+          Navigator.of(context).push(_noAnimRoute(ReportScreen()));
         },
         onAudit: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => AuditScreen()),
-          );
+          Navigator.of(context).push(_noAnimRoute(AuditScreen()));
         },
       ),
     );

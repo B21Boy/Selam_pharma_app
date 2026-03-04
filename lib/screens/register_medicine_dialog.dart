@@ -8,6 +8,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../providers/pharmacy_provider.dart';
 import '../models/medicine.dart';
+import 'dart:typed_data';
 // Cloudinary upload is handled by SyncService; keep dialog offline-first.
 
 class RegisterMedicineDialog extends StatefulWidget {
@@ -39,72 +40,44 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
   final List<String> _categories = ['Antibiotics', 'Cosmetics', 'Others'];
 
   // Template and recent items data
-  final List<Map<String, dynamic>> _recentMedicines = [];
   final List<Map<String, dynamic>> _savedTemplates = [];
+  final List<Map<String, dynamic>> _recentMedicines = [];
 
-  // Validation states
+  // UI constants / simple theme tokens local to this dialog
+  final Color _primaryBlue = Colors.blue;
+  final Color _accentGreen = Colors.green;
+  final Color _successColor = Colors.green;
+  final double _cornerRadius = 8.0;
+  double _pageScale = 1.0;
+
+  // Simple validity flags used by input borders (kept true by default)
   bool _isNameValid = true;
   bool _isQtyValid = true;
   bool _isBuyPriceValid = true;
   bool _isSellPriceValid = true;
 
-  // Pharmacy-themed colors
-  static const Color _primaryBlue = Color(0xFF1976D2);
-  static const Color _accentGreen = Color(0xFF4CAF50);
-  static const Color _successColor = Color(0xFF4CAF50);
-
-  // Local page scaling (base width chosen for designer: 500dp)
-  final double _baseWidth = 500.0;
-  final double _minScale = 0.7; // prevent unreadably small text
-  final double _maxScale = 1.0; // do not grow larger than base here
-  final double _pageScale = 1.0;
-  // UI constants for consistent look
-  final double _cornerRadius = 6.0;
-
-  // Make the page even more compact by default
-  double spSmall() => s(1);
-  double spMed() => s(2);
-  double spLarge() => s(3);
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Load saved templates and recent items after context is available
-    if (_recentMedicines.isEmpty) {
-      _loadSavedData();
-    }
-  }
-
   @override
   void initState() {
     super.initState();
+    _loadSavedData();
     _successAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 500),
       vsync: this,
+      duration: const Duration(milliseconds: 450),
     );
-    _successAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _successAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
       CurvedAnimation(
         parent: _successAnimationController,
-        curve: Curves.elasticOut,
+        curve: Curves.easeOutBack,
       ),
     );
-
     _loadingAnimationController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
       vsync: this,
-    )..repeat();
-    _loadingAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _loadingAnimationController,
-        curve: Curves.easeInOut,
-      ),
+      duration: const Duration(milliseconds: 600),
     );
-
-    // Add listeners for real-time validation
-    _nameController.addListener(_validateName);
-    _totalQtyController.addListener(_validateQuantity);
-    _buyPriceController.addListener(_validateBuyPrice);
-    _sellPriceController.addListener(_validateSellPrice);
+    _loadingAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(_loadingAnimationController);
   }
 
   @override
@@ -113,76 +86,27 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
     _totalQtyController.dispose();
     _buyPriceController.dispose();
     _sellPriceController.dispose();
+    _barcodeController.dispose();
     _successAnimationController.dispose();
     _loadingAnimationController.dispose();
     super.dispose();
   }
 
-  // Real-time validation methods
-  void _validateName() {
-    setState(() {
-      _isNameValid = _nameController.text.trim().isNotEmpty;
-    });
-  }
-
-  void _validateQuantity() {
-    setState(() {
-      final qty = int.tryParse(_totalQtyController.text);
-      _isQtyValid = qty != null && qty > 0;
-    });
-  }
-
-  void _validateBuyPrice() {
-    setState(() {
-      final price = double.tryParse(
-        _buyPriceController.text.replaceAll('₹', '').replaceAll(',', ''),
-      );
-      _isBuyPriceValid = price != null && price > 0;
-    });
-  }
-
-  void _validateSellPrice() {
-    setState(() {
-      final price = double.tryParse(
-        _sellPriceController.text.replaceAll('₹', '').replaceAll(',', ''),
-      );
-      _isSellPriceValid = price != null && price > 0;
-    });
-  }
-
-  // Quantity increment/decrement
-  void _incrementQuantity() {
-    final currentQty = int.tryParse(_totalQtyController.text) ?? 0;
-    _totalQtyController.text = (currentQty + 1).toString();
-  }
-
-  void _decrementQuantity() {
-    final currentQty = int.tryParse(_totalQtyController.text) ?? 0;
-    if (currentQty > 1) {
-      _totalQtyController.text = (currentQty - 1).toString();
+  // Format price input to currency (basic implementation)
+  String _formatPrice(String value) {
+    try {
+      final cleaned = value.replaceAll(RegExp(r'[^0-9.]'), '');
+      final doubleValue = double.tryParse(cleaned) ?? 0.0;
+      final formatter = NumberFormat.currency(locale: 'en_IN', symbol: '₹');
+      return formatter.format(doubleValue);
+    } catch (e) {
+      return value;
     }
   }
 
-  // Helper method to safely parse price strings
-  int _parsePrice(String priceText) {
-    final cleaned = priceText.replaceAll('₹', '').replaceAll(',', '');
-    final parts = cleaned.split('.');
-    return int.parse(parts[0]);
-  }
-
-  // Price formatting
-  String _formatPrice(String value) {
-    if (value.isEmpty) return '';
-    final numericValue = value.replaceAll('₹', '').replaceAll(',', '');
-    final doubleValue = double.tryParse(numericValue);
-    if (doubleValue == null) return value;
-
-    final formatter = NumberFormat.currency(
-      locale: 'en_IN',
-      symbol: '₹',
-      decimalDigits: 2,
-    );
-    return formatter.format(doubleValue);
+  double _parsePrice(String value) {
+    final cleaned = value.replaceAll(RegExp(r'[^0-9.]'), '');
+    return double.tryParse(cleaned) ?? 0.0;
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -236,12 +160,12 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
     // Load recent medicines from provider
     final provider = context.read<PharmacyProvider>();
     _recentMedicines.clear();
-    // Get last 5 medicines (in a real app, this would be stored separately)
+    // Get first 5 medicines (oldest) for the list
     final allMedicines = provider.medicines;
     if (allMedicines.length > 5) {
       _recentMedicines.addAll(
         allMedicines
-            .sublist(allMedicines.length - 5)
+            .take(5)
             .map(
               (medicine) => {
                 'name': medicine.name,
@@ -304,8 +228,8 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Template saved successfully!'),
+        SnackBar(
+          content: const Text('Template saved successfully!'),
           backgroundColor: _successColor,
         ),
       );
@@ -442,8 +366,8 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
         id: Uuid().v4(),
         name: _nameController.text.trim(),
         totalQty: int.parse(_totalQtyController.text),
-        buyPrice: _parsePrice(_buyPriceController.text),
-        sellPrice: _parsePrice(_sellPriceController.text),
+        buyPrice: _parsePrice(_buyPriceController.text).round(),
+        sellPrice: _parsePrice(_sellPriceController.text).round(),
         imageBytes: _imageBytes,
         category: _selectedCategory,
         barcode: _barcodeController.text.isNotEmpty
@@ -473,7 +397,8 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
       setState(() {
         _recentMedicines.add(recentItem);
         if (_recentMedicines.length > 5) {
-          _recentMedicines.removeAt(0);
+          // keep first five entries; drop newest extra
+          _recentMedicines.removeLast();
         }
         _isLoading = false;
         _showSuccess = true;
@@ -483,8 +408,8 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
 
       // Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Medicine registered successfully!'),
+        SnackBar(
+          content: const Text('Medicine registered successfully!'),
           backgroundColor: _successColor,
         ),
       );
@@ -508,691 +433,731 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Container(
         constraints: BoxConstraints(
-          maxWidth: isLandscape ? screenWidth * 0.6 : screenWidth * 0.9,
-          maxHeight: MediaQuery.of(context).size.height * 0.9,
+          // allow full width so nothing is clipped; minimum constraints are handled by padding and natural content
+          maxWidth: screenWidth,
+          maxHeight: MediaQuery.of(context).size.height * 0.95,
         ),
         child: Stack(
           children: [
             SingleChildScrollView(
               padding: EdgeInsets.only(
-                bottom: MediaQuery.of(context).viewInsets.bottom + s(12),
+                bottom: MediaQuery.of(context).viewInsets.bottom + s(10),
                 left: s(6),
                 right: s(6),
                 top: s(8),
               ),
               child: Form(
                 key: _formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // Header
-                    Row(
-                      children: [
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: const Icon(Icons.close, size: 16),
-                          padding: const EdgeInsets.all(4),
-                          constraints: const BoxConstraints(
-                            minWidth: 28,
-                            minHeight: 28,
-                          ),
-                          style: IconButton.styleFrom(
-                            foregroundColor: _primaryBlue,
-                          ),
-                        ),
-                        SizedBox(width: s(2)),
-                        Expanded(
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: s(4)),
-                            child: Text(
-                              'Register Medicine',
-                              maxLines: 1,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                color: _primaryBlue,
-                              ),
-                              textAlign: TextAlign.center,
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: s(8)),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Header: single row with title centered between left and right groups
+                      Row(
+                        children: [
+                          IconButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            icon: const Icon(Icons.close, size: 24),
+                            padding: const EdgeInsets.all(8),
+                            constraints: const BoxConstraints(
+                              minWidth: 44,
+                              minHeight: 44,
                             ),
+                            style: IconButton.styleFrom(
+                              foregroundColor: _primaryBlue,
+                            ),
+                            tooltip: 'Close',
                           ),
-                        ),
-                        SizedBox(
-                          width: s(120),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  minWidth: 28,
-                                  minHeight: 28,
-                                ),
-                                child: PopupMenuButton<String>(
-                                  onSelected: (value) {
-                                    if (value == 'save') {
-                                      _saveAsTemplate();
-                                    }
-                                  },
-                                  itemBuilder: (context) => [
-                                    PopupMenuItem(
-                                      value: 'save',
-                                      child: Row(
-                                        children: [
-                                          Icon(Icons.save, color: _primaryBlue),
-                                          SizedBox(width: s(4)),
-                                          Text('Save as Template'),
-                                        ],
-                                      ),
-                                    ),
-                                    const PopupMenuDivider(),
-                                    ..._savedTemplates.map(
-                                      (template) => PopupMenuItem(
-                                        value:
-                                            'template_${_savedTemplates.indexOf(template)}',
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              Icons.bookmark,
-                                              color: _accentGreen,
-                                            ),
-                                            SizedBox(width: s(4)),
-                                            Expanded(
-                                              child: Text(
-                                                template['name'],
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        onTap: () => _applyTemplate(template),
-                                      ),
-                                    ),
-                                  ],
-                                  icon: const Icon(
-                                    Icons.more_vert,
+
+                          Expanded(
+                            child: Center(
+                              child: FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  'Register Medicine',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
                                     color: _primaryBlue,
-                                    size: 16,
-                                  ),
-                                  tooltip: 'Templates & Options',
-                                ),
-                              ),
-                              SizedBox(width: s(2)),
-                              IconButton(
-                                onPressed: () =>
-                                    setState(() => _isExpanded = !_isExpanded),
-                                icon: Icon(
-                                  _isExpanded
-                                      ? Icons.fullscreen_exit
-                                      : Icons.fullscreen,
-                                  color: _primaryBlue,
-                                  size: 16,
-                                ),
-                                padding: const EdgeInsets.all(4),
-                                constraints: const BoxConstraints(
-                                  minWidth: 28,
-                                  minHeight: 28,
-                                ),
-                                tooltip: _isExpanded
-                                    ? 'Exit full screen'
-                                    : 'Full screen mode',
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    SizedBox(height: spLarge()),
-
-                    // Templates Section
-                    if (_savedTemplates.isNotEmpty) _buildTemplatesSection(),
-
-                    SizedBox(height: spLarge()),
-
-                    // Recent Items Section (only show if has recent items)
-                    if (_recentMedicines.isNotEmpty) _buildRecentItemsSection(),
-
-                    SizedBox(height: spLarge()),
-
-                    // Basic Information Section
-                    _buildSectionCard(
-                      title: 'Basic Information',
-                      icon: Icons.info_outline,
-                      children: [
-                        // Medicine Name - Prominent field
-                        TextFormField(
-                          controller: _nameController,
-                          decoration: InputDecoration(
-                            contentPadding: EdgeInsets.symmetric(
-                              vertical: s(6),
-                              horizontal: s(8),
-                            ),
-                            labelText: 'Medicine Name *',
-                            labelStyle: const TextStyle(fontSize: 12),
-                            hintText: 'Enter medicine name',
-
-                            prefixIcon: const Icon(Icons.medication),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                _cornerRadius,
-                              ),
-                              borderSide: BorderSide(
-                                color: _isNameValid ? Colors.grey : Colors.red,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                _cornerRadius,
-                              ),
-                              borderSide: BorderSide(
-                                color: _isNameValid ? Colors.grey : Colors.red,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                _cornerRadius,
-                              ),
-                              borderSide: BorderSide(
-                                color: Theme.of(context).primaryColor,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                          textCapitalization: TextCapitalization.words,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Medicine name is required';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: spMed()),
-
-                        // Category
-                        DropdownButtonFormField<String>(
-                          isExpanded: true,
-                          isDense: false,
-                          initialValue: _selectedCategory,
-                          decoration: InputDecoration(
-                            contentPadding: EdgeInsets.symmetric(
-                              vertical: s(6),
-                              horizontal: s(8),
-                            ),
-                            labelText: 'Category *',
-                            hintText: 'Select medicine category',
-
-                            prefixIcon: const Icon(Icons.category),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                _cornerRadius,
-                              ),
-                            ),
-                          ),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: Colors.black87,
-                          ),
-                          dropdownColor: Colors.white,
-                          items: _categories.map((category) {
-                            return DropdownMenuItem(
-                              value: category,
-                              child: Text(
-                                category,
-                                style: const TextStyle(color: Colors.black87),
-                              ),
-                            );
-                          }).toList(),
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedCategory = value!;
-                            });
-                          },
-                          validator: (value) =>
-                              value == null ? 'Please select a category' : null,
-                        ),
-                        SizedBox(height: spMed()),
-
-                        // Barcode (optional, shown when scanned or entered)
-                        TextFormField(
-                          controller: _barcodeController,
-                          decoration: InputDecoration(
-                            contentPadding: EdgeInsets.symmetric(
-                              vertical: s(6),
-                              horizontal: s(8),
-                            ),
-                            labelText: 'Barcode',
-                            labelStyle: const TextStyle(fontSize: 12),
-                            hintText: 'Scan or enter barcode',
-
-                            prefixIcon: const Icon(Icons.qr_code),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.qr_code_scanner),
-                              onPressed: _scanBarcode,
-                              tooltip: 'Scan Barcode',
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                _cornerRadius,
-                              ),
-                            ),
-                          ),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(height: s(8)),
-
-                    // Inventory Section
-                    _buildSectionCard(
-                      title: 'Inventory',
-                      icon: Icons.inventory_2,
-                      children: [
-                        // Quantity with increment/decrement
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Total Quantity *',
-                              style: Theme.of(context).textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w500),
-                            ),
-                            SizedBox(height: s(6)),
-                            Row(
-                              children: [
-                                IconButton(
-                                  onPressed: _decrementQuantity,
-                                  icon: const Icon(Icons.remove, size: 14),
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Theme.of(
-                                      context,
-                                    ).primaryColor.withValues(alpha: 0.1),
-                                    minimumSize: const Size(40, 40),
                                   ),
                                 ),
-                                SizedBox(width: s(4)),
-                                Expanded(
-                                  child: TextFormField(
-                                    controller: _totalQtyController,
-                                    decoration: InputDecoration(
-                                      contentPadding: EdgeInsets.symmetric(
-                                        vertical: s(4),
-                                        horizontal: s(8),
-                                      ),
-                                      hintText: 'Enter quantity',
+                              ),
+                            ),
+                          ),
 
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          _cornerRadius,
-                                        ),
-                                        borderSide: BorderSide(
-                                          color: _isQtyValid
-                                              ? Colors.grey
-                                              : Colors.red,
-                                        ),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          _cornerRadius,
-                                        ),
-                                        borderSide: BorderSide(
-                                          color: _isQtyValid
-                                              ? Colors.grey
-                                              : Colors.red,
-                                        ),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(
-                                          _cornerRadius,
-                                        ),
-                                        borderSide: BorderSide(
-                                          color: Theme.of(context).primaryColor,
-                                          width: 2,
-                                        ),
-                                      ),
+                          SizedBox(
+                            width: 120,
+                            child: Align(
+                              alignment: Alignment.centerRight,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ConstrainedBox(
+                                    constraints: const BoxConstraints(
+                                      minWidth: 28,
+                                      minHeight: 28,
                                     ),
-                                    style: const TextStyle(fontSize: 14),
-                                    keyboardType: TextInputType.number,
-                                    textAlign: TextAlign.center,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                    ],
-                                    validator: (value) {
-                                      if (value == null || value.isEmpty) {
-                                        return 'Quantity is required';
-                                      }
-                                      final qty = int.tryParse(value);
-                                      if (qty == null || qty <= 0) {
-                                        return 'Enter a valid quantity';
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                                SizedBox(width: s(4)),
-                                IconButton(
-                                  onPressed: _incrementQuantity,
-                                  icon: const Icon(Icons.add, size: 14),
-                                  style: IconButton.styleFrom(
-                                    backgroundColor: Theme.of(
-                                      context,
-                                    ).primaryColor.withValues(alpha: 0.1),
-                                    minimumSize: const Size(40, 40),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(height: s(8)),
-
-                    // Pricing Section
-                    _buildSectionCard(
-                      title: 'Pricing',
-                      icon: Icons.attach_money,
-                      children: [
-                        // Buy Price
-                        TextFormField(
-                          controller: _buyPriceController,
-                          decoration: InputDecoration(
-                            contentPadding: EdgeInsets.symmetric(
-                              vertical: s(6),
-                              horizontal: s(8),
-                            ),
-                            labelText: 'Buy Price (per unit) *',
-                            labelStyle: const TextStyle(fontSize: 12),
-                            hintText: '₹0.00',
-
-                            prefixIcon: const Icon(Icons.shopping_cart),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                _cornerRadius,
-                              ),
-                              borderSide: BorderSide(
-                                color: _isBuyPriceValid
-                                    ? Colors.grey
-                                    : Colors.red,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                _cornerRadius,
-                              ),
-                              borderSide: BorderSide(
-                                color: _isBuyPriceValid
-                                    ? Colors.grey
-                                    : Colors.red,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                _cornerRadius,
-                              ),
-                              borderSide: BorderSide(
-                                color: Theme.of(context).primaryColor,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          style: const TextStyle(fontSize: 14),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r'[0-9.₹,]'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            final formatted = _formatPrice(value);
-                            if (formatted != value) {
-                              _buyPriceController.value = TextEditingValue(
-                                text: formatted,
-                                selection: TextSelection.collapsed(
-                                  offset: formatted.length,
-                                ),
-                              );
-                            }
-                          },
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Buy price is required';
-                            }
-                            final price = double.tryParse(
-                              value.replaceAll('₹', '').replaceAll(',', ''),
-                            );
-                            if (price == null || price <= 0) {
-                              return 'Enter a valid price';
-                            }
-                            return null;
-                          },
-                        ),
-                        SizedBox(height: spMed()),
-
-                        // Sell Price
-                        TextFormField(
-                          controller: _sellPriceController,
-                          decoration: InputDecoration(
-                            contentPadding: EdgeInsets.symmetric(
-                              vertical: s(6),
-                              horizontal: s(8),
-                            ),
-                            labelText: 'Sell Price (per unit) *',
-                            labelStyle: const TextStyle(fontSize: 12),
-                            hintText: '₹0.00',
-
-                            prefixIcon: const Icon(Icons.sell),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                _cornerRadius,
-                              ),
-                              borderSide: BorderSide(
-                                color: _isSellPriceValid
-                                    ? Colors.grey
-                                    : Colors.red,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                _cornerRadius,
-                              ),
-                              borderSide: BorderSide(
-                                color: _isSellPriceValid
-                                    ? Colors.grey
-                                    : Colors.red,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(
-                                _cornerRadius,
-                              ),
-                              borderSide: BorderSide(
-                                color: Theme.of(context).primaryColor,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                          style: const TextStyle(fontSize: 14),
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r'[0-9.₹,]'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            final formatted = _formatPrice(value);
-                            if (formatted != value) {
-                              _sellPriceController.value = TextEditingValue(
-                                text: formatted,
-                                selection: TextSelection.collapsed(
-                                  offset: formatted.length,
-                                ),
-                              );
-                            }
-                          },
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Sell price is required';
-                            }
-                            final price = double.tryParse(
-                              value.replaceAll('₹', '').replaceAll(',', ''),
-                            );
-                            if (price == null || price <= 0) {
-                              return 'Enter a valid price';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
-
-                    SizedBox(height: spLarge()),
-
-                    // Media Section
-                    _buildSectionCard(
-                      title: 'Media',
-                      icon: Icons.photo_camera,
-                      children: [
-                        // Image picker buttons
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () => _pickImage(ImageSource.camera),
-                                icon: const Icon(Icons.camera_alt, size: 14),
-                                label: const Text('Camera'),
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                  ),
-                                  minimumSize: const Size(0, 40),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      _cornerRadius,
+                                    child: PopupMenuButton<String>(
+                                      onSelected: (value) {
+                                        if (value == 'save') {
+                                          _saveAsTemplate();
+                                        } else if (value.startsWith(
+                                          'template_',
+                                        )) {
+                                          final parts = value.split('_');
+                                          final idx =
+                                              int.tryParse(parts[1]) ?? -1;
+                                          if (idx >= 0 &&
+                                              idx < _savedTemplates.length) {
+                                            _applyTemplate(
+                                              _savedTemplates[idx],
+                                            );
+                                          }
+                                        }
+                                      },
+                                      itemBuilder: (context) => [
+                                        PopupMenuItem(
+                                          value: 'save',
+                                          child: Row(
+                                            children: [
+                                              Icon(
+                                                Icons.save,
+                                                color: _primaryBlue,
+                                              ),
+                                              SizedBox(width: s(4)),
+                                              Text('Save as Template'),
+                                            ],
+                                          ),
+                                        ),
+                                        const PopupMenuDivider(),
+                                        ..._savedTemplates.asMap().entries.map((
+                                          entry,
+                                        ) {
+                                          final index = entry.key;
+                                          final template = entry.value;
+                                          return PopupMenuItem(
+                                            value: 'template_$index',
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.bookmark,
+                                                  color: _accentGreen,
+                                                ),
+                                                SizedBox(width: s(4)),
+                                                Expanded(
+                                                  child: Text(
+                                                    template['name'] ??
+                                                        'Unknown',
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }),
+                                      ],
+                                      icon: Icon(
+                                        Icons.more_vert,
+                                        color: _primaryBlue,
+                                        size: 16,
+                                      ),
+                                      tooltip: 'Templates & options',
                                     ),
                                   ),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: s(4)),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () =>
-                                    _pickImage(ImageSource.gallery),
-                                icon: const Icon(Icons.photo_library, size: 14),
-                                label: const Text('Gallery'),
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                  ),
-                                  minimumSize: const Size(0, 40),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(
-                                      _cornerRadius,
+                                  SizedBox(width: s(2)),
+                                  IconButton(
+                                    onPressed: () => setState(
+                                      () => _isExpanded = !_isExpanded,
                                     ),
+                                    icon: Icon(
+                                      _isExpanded
+                                          ? Icons.fullscreen_exit
+                                          : Icons.fullscreen,
+                                      color: _primaryBlue,
+                                      size: 18,
+                                    ),
+                                    padding: const EdgeInsets.all(4),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 28,
+                                      minHeight: 28,
+                                    ),
+                                    tooltip: _isExpanded
+                                        ? 'Exit full screen'
+                                        : 'Full screen mode',
                                   ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Image preview
-                        if (_imageBytes != null) ...[
-                          SizedBox(height: spMed()),
-                          Center(
-                            child: Container(
-                              width: 96,
-                              height: 96,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(
-                                  _cornerRadius,
-                                ),
-                                border: Border.all(
-                                  color: Colors.grey.shade300,
-                                  width: 2,
-                                ),
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(
-                                  _cornerRadius,
-                                ),
-                                child: Image.memory(
-                                  _imageBytes!,
-                                  fit: BoxFit.cover,
-                                ),
+                                ],
                               ),
                             ),
                           ),
                         ],
-                      ],
-                    ),
-                    SizedBox(height: s(24)),
+                      ),
+                      SizedBox(height: spLarge()),
 
-                    // Register Button
-                    AnimatedBuilder(
-                      animation: _loadingAnimation,
-                      builder: (context, child) {
-                        return ElevatedButton(
-                          onPressed: _isLoading ? null : _registerMedicine,
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            minimumSize: const Size(double.infinity, 48),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(
-                                _cornerRadius,
+                      // Templates Section (accessed via popup menu)
+                      SizedBox(height: spLarge()),
+
+                      // Recent Items Section (only show if has recent items)
+                      if (_recentMedicines.isNotEmpty)
+                        _buildRecentItemsSection(),
+
+                      SizedBox(height: spLarge()),
+
+                      // Basic Information Section
+                      _buildSectionCard(
+                        title: 'Basic Information',
+                        icon: Icons.info_outline,
+                        children: [
+                          // Medicine Name - Prominent field
+                          TextFormField(
+                            controller: _nameController,
+                            decoration: InputDecoration(
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: s(10),
+                                horizontal: s(8),
+                              ),
+                              labelText: 'Medicine Name *',
+                              labelStyle: TextStyle(fontSize: 12),
+                              hintText: 'Enter medicine name',
+
+                              prefixIcon: const Icon(Icons.medication),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  _cornerRadius,
+                                ),
+                                borderSide: BorderSide(
+                                  color: _isNameValid
+                                      ? Colors.grey
+                                      : Colors.red,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  _cornerRadius,
+                                ),
+                                borderSide: BorderSide(
+                                  color: _isNameValid
+                                      ? Colors.grey
+                                      : Colors.red,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  _cornerRadius,
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).primaryColor,
+                                  width: 2,
+                                ),
                               ),
                             ),
-                            elevation: _isLoading ? 0 : 2,
-                            backgroundColor: _isLoading
-                                ? Colors.grey
-                                : _primaryBlue,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            textCapitalization: TextCapitalization.words,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Medicine name is required';
+                              }
+                              return null;
+                            },
                           ),
-                          child: _isLoading
-                              ? Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        valueColor:
-                                            AlwaysStoppedAnimation<Color>(
-                                              _primaryBlue,
-                                            ),
+                          SizedBox(height: spMed()),
+
+                          // Category
+                          DropdownButtonFormField<String>(
+                            isExpanded: true,
+                            isDense: false,
+                            initialValue: _selectedCategory,
+                            decoration: InputDecoration(
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: s(10),
+                                horizontal: s(8),
+                              ),
+                              labelText: 'Category *',
+                              hintText: 'Select medicine category',
+
+                              prefixIcon: const Icon(Icons.category),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  _cornerRadius,
+                                ),
+                              ),
+                            ),
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.black87,
+                            ),
+                            dropdownColor: Colors.white,
+                            items: _categories.map((category) {
+                              return DropdownMenuItem(
+                                value: category,
+                                child: Text(
+                                  category,
+                                  style: TextStyle(color: Colors.black87),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedCategory = value!;
+                              });
+                            },
+                            validator: (value) => value == null
+                                ? 'Please select a category'
+                                : null,
+                          ),
+                          SizedBox(height: spMed()),
+
+                          // Barcode (optional, shown when scanned or entered)
+                          TextFormField(
+                            controller: _barcodeController,
+                            decoration: InputDecoration(
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: s(10),
+                                horizontal: s(8),
+                              ),
+                              labelText: 'Barcode',
+                              labelStyle: TextStyle(fontSize: 12),
+                              hintText: 'Scan or enter barcode',
+
+                              prefixIcon: const Icon(Icons.qr_code),
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.qr_code_scanner),
+                                onPressed: _scanBarcode,
+                                tooltip: 'Scan Barcode',
+                              ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  _cornerRadius,
+                                ),
+                              ),
+                            ),
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: s(8)),
+
+                      // Inventory Section
+                      _buildSectionCard(
+                        title: 'Inventory',
+                        icon: Icons.inventory_2,
+                        children: [
+                          // Quantity with increment/decrement
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Total Quantity *',
+                                style: Theme.of(context).textTheme.titleSmall
+                                    ?.copyWith(fontWeight: FontWeight.w500),
+                              ),
+                              SizedBox(height: s(6)),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    onPressed: _decrementQuantity,
+                                    icon: const Icon(Icons.remove, size: 14),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Theme.of(
+                                        context,
+                                      ).primaryColor.withOpacity(0.1),
+                                      minimumSize: const Size(40, 40),
+                                    ),
+                                  ),
+                                  SizedBox(width: s(4)),
+                                  Expanded(
+                                    child: TextFormField(
+                                      controller: _totalQtyController,
+                                      decoration: InputDecoration(
+                                        contentPadding: EdgeInsets.symmetric(
+                                          vertical: s(8),
+                                          horizontal: s(8),
+                                        ),
+                                        hintText: 'Enter quantity',
+
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            _cornerRadius,
+                                          ),
+                                          borderSide: BorderSide(
+                                            color: _isQtyValid
+                                                ? Colors.grey
+                                                : Colors.red,
+                                          ),
+                                        ),
+                                        enabledBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            _cornerRadius,
+                                          ),
+                                          borderSide: BorderSide(
+                                            color: _isQtyValid
+                                                ? Colors.grey
+                                                : Colors.red,
+                                          ),
+                                        ),
+                                        focusedBorder: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            _cornerRadius,
+                                          ),
+                                          borderSide: BorderSide(
+                                            color: Theme.of(
+                                              context,
+                                            ).primaryColor,
+                                            width: 2,
+                                          ),
+                                        ),
+                                      ),
+                                      style: TextStyle(fontSize: 14),
+                                      keyboardType: TextInputType.number,
+                                      textAlign: TextAlign.center,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                      ],
+                                      validator: (value) {
+                                        if (value == null || value.isEmpty) {
+                                          return 'Quantity is required';
+                                        }
+                                        final qty = int.tryParse(value);
+                                        if (qty == null || qty <= 0) {
+                                          return 'Enter a valid quantity';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(width: s(4)),
+                                  IconButton(
+                                    onPressed: _incrementQuantity,
+                                    icon: const Icon(Icons.add, size: 14),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Theme.of(
+                                        context,
+                                      ).primaryColor.withOpacity(0.1),
+                                      minimumSize: const Size(40, 40),
+                                    ),
+                                    tooltip: 'Increase quantity',
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: s(8)),
+
+                      // Pricing Section
+                      _buildSectionCard(
+                        title: 'Pricing',
+                        icon: Icons.attach_money,
+                        children: [
+                          // Buy Price
+                          TextFormField(
+                            controller: _buyPriceController,
+                            decoration: InputDecoration(
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: s(10),
+                                horizontal: s(8),
+                              ),
+                              labelText: 'Buy Price (per unit) *',
+                              labelStyle: TextStyle(fontSize: 12),
+                              hintText: '₹0.00',
+
+                              prefixIcon: const Icon(Icons.shopping_cart),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  _cornerRadius,
+                                ),
+                                borderSide: BorderSide(
+                                  color: _isBuyPriceValid
+                                      ? Colors.grey
+                                      : Colors.red,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  _cornerRadius,
+                                ),
+                                borderSide: BorderSide(
+                                  color: _isBuyPriceValid
+                                      ? Colors.grey
+                                      : Colors.red,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  _cornerRadius,
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).primaryColor,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            style: TextStyle(fontSize: 14),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'[0-9.₹,]'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              final formatted = _formatPrice(value);
+                              if (formatted != value) {
+                                _buyPriceController.value = TextEditingValue(
+                                  text: formatted,
+                                  selection: TextSelection.collapsed(
+                                    offset: formatted.length,
+                                  ),
+                                );
+                              }
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Buy price is required';
+                              }
+                              final price = double.tryParse(
+                                value.replaceAll('₹', '').replaceAll(',', ''),
+                              );
+                              if (price == null || price <= 0) {
+                                return 'Enter a valid price';
+                              }
+                              return null;
+                            },
+                          ),
+                          SizedBox(height: spMed()),
+
+                          // Sell Price
+                          TextFormField(
+                            controller: _sellPriceController,
+                            decoration: InputDecoration(
+                              contentPadding: EdgeInsets.symmetric(
+                                vertical: s(10),
+                                horizontal: s(8),
+                              ),
+                              labelText: 'Sell Price (per unit) *',
+                              labelStyle: const TextStyle(fontSize: 12),
+                              hintText: '₹0.00',
+
+                              prefixIcon: const Icon(Icons.sell),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  _cornerRadius,
+                                ),
+                                borderSide: BorderSide(
+                                  color: _isSellPriceValid
+                                      ? Colors.grey
+                                      : Colors.red,
+                                ),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  _cornerRadius,
+                                ),
+                                borderSide: BorderSide(
+                                  color: _isSellPriceValid
+                                      ? Colors.grey
+                                      : Colors.red,
+                                ),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(
+                                  _cornerRadius,
+                                ),
+                                borderSide: BorderSide(
+                                  color: Theme.of(context).primaryColor,
+                                  width: 2,
+                                ),
+                              ),
+                            ),
+                            style: TextStyle(fontSize: 14),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'[0-9.₹,]'),
+                              ),
+                            ],
+                            onChanged: (value) {
+                              final formatted = _formatPrice(value);
+                              if (formatted != value) {
+                                _sellPriceController.value = TextEditingValue(
+                                  text: formatted,
+                                  selection: TextSelection.collapsed(
+                                    offset: formatted.length,
+                                  ),
+                                );
+                              }
+                            },
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Sell price is required';
+                              }
+                              final price = double.tryParse(
+                                value.replaceAll('₹', '').replaceAll(',', ''),
+                              );
+                              if (price == null || price <= 0) {
+                                return 'Enter a valid price';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: spLarge()),
+
+                      // Media Section
+                      _buildSectionCard(
+                        title: 'Media',
+                        icon: Icons.photo_camera,
+                        children: [
+                          // Image picker buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () =>
+                                      _pickImage(ImageSource.camera),
+                                  icon: const Icon(Icons.camera_alt, size: 14),
+                                  label: const Text('Camera'),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
+                                    minimumSize: const Size(0, 40),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        _cornerRadius,
                                       ),
                                     ),
-                                    SizedBox(width: s(4)),
-                                    const Text(
-                                      'Registering...',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ],
-                                )
-                              : const Text(
-                                  'Register Medicine',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
-                        );
-                      },
-                    ),
+                              ),
+                              SizedBox(width: s(4)),
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () =>
+                                      _pickImage(ImageSource.gallery),
+                                  icon: const Icon(
+                                    Icons.photo_library,
+                                    size: 14,
+                                  ),
+                                  label: const Text('Gallery'),
+                                  style: ElevatedButton.styleFrom(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
+                                    minimumSize: const Size(0, 40),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(
+                                        _cornerRadius,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
 
-                    SizedBox(height: spMed()),
-                  ],
+                          // Image preview
+                          if (_imageBytes != null) ...[
+                            SizedBox(height: spMed()),
+                            Center(
+                              child: Container(
+                                width: 96,
+                                height: 96,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(
+                                    _cornerRadius,
+                                  ),
+                                  border: Border.all(
+                                    color: Colors.grey.shade300,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(
+                                    _cornerRadius,
+                                  ),
+                                  child: Image.memory(
+                                    _imageBytes!,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                      SizedBox(height: s(24)),
+
+                      // Register Button
+                      AnimatedBuilder(
+                        animation: _loadingAnimation,
+                        builder: (context, child) {
+                          return ElevatedButton(
+                            onPressed: _isLoading ? null : _registerMedicine,
+                            style: ElevatedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              minimumSize: const Size(double.infinity, 48),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(
+                                  _cornerRadius,
+                                ),
+                              ),
+                              elevation: _isLoading ? 0 : 2,
+                              backgroundColor: _isLoading
+                                  ? Colors.grey
+                                  : _primaryBlue,
+                            ),
+                            child: _isLoading
+                                ? Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                _primaryBlue,
+                                              ),
+                                        ),
+                                      ),
+                                      SizedBox(width: s(4)),
+                                      const Text(
+                                        'Registering...',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ],
+                                  )
+                                : const Text(
+                                    'Register Medicine',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                          );
+                        },
+                      ),
+
+                      SizedBox(height: spMed()),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -1203,7 +1168,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                 animation: _successAnimation,
                 builder: (context, child) {
                   return Container(
-                    color: Colors.black.withValues(alpha: 0.7),
+                    color: Colors.black.withOpacity(0.7),
                     child: Center(
                       child: Transform.scale(
                         scale: _successAnimation.value,
@@ -1214,7 +1179,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                             borderRadius: BorderRadius.circular(16),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.2),
+                                color: Colors.black.withOpacity(0.2),
                                 blurRadius: 10,
                                 offset: const Offset(0, 4),
                               ),
@@ -1261,6 +1226,26 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
   // Convenient helper to scale spacings/paddings/radii within this page.
   double s(double value) => value * _pageScale;
 
+  double spLarge() => s(18);
+  double spMed() => s(10);
+  double spSmall() => s(6);
+
+  void _decrementQuantity() {
+    final current = int.tryParse(_totalQtyController.text) ?? 1;
+    final updated = (current > 1) ? current - 1 : 1;
+    setState(() {
+      _totalQtyController.text = updated.toString();
+    });
+  }
+
+  void _incrementQuantity() {
+    final current = int.tryParse(_totalQtyController.text) ?? 0;
+    final updated = current + 1;
+    setState(() {
+      _totalQtyController.text = updated.toString();
+    });
+  }
+
   Widget _buildTemplatesSection() {
     return Card(
       elevation: 1,
@@ -1281,7 +1266,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                     'Saved Templates',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: _accentGreen,
@@ -1315,10 +1300,10 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                       margin: EdgeInsets.only(right: s(4)),
                       padding: EdgeInsets.all(s(2)),
                       decoration: BoxDecoration(
-                        color: _accentGreen.withValues(alpha: 0.05),
+                        color: _accentGreen.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(_cornerRadius),
                         border: Border.all(
-                          color: _accentGreen.withValues(alpha: 0.2),
+                          color: _accentGreen.withOpacity(0.2),
                         ),
                       ),
                       child: Column(
@@ -1326,7 +1311,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                         children: [
                           Text(
                             template['name'] ?? 'Unknown',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
@@ -1341,7 +1326,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                           SizedBox(height: spSmall()),
                           Text(
                             '₹${template['sellPrice'] ?? 0.0}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: _primaryBlue,
@@ -1380,7 +1365,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                     'Recent Items',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
                       color: _primaryBlue,
@@ -1404,10 +1389,10 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                       margin: EdgeInsets.only(right: s(4)),
                       padding: EdgeInsets.all(s(2)),
                       decoration: BoxDecoration(
-                        color: _primaryBlue.withValues(alpha: 0.05),
+                        color: _primaryBlue.withOpacity(0.05),
                         borderRadius: BorderRadius.circular(_cornerRadius),
                         border: Border.all(
-                          color: _primaryBlue.withValues(alpha: 0.2),
+                          color: _primaryBlue.withOpacity(0.2),
                         ),
                       ),
                       child: Column(
@@ -1415,7 +1400,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                         children: [
                           Text(
                             item['name'] ?? 'Unknown',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                             ),
@@ -1430,7 +1415,7 @@ class RegisterMedicineDialogState extends State<RegisterMedicineDialog>
                           SizedBox(height: spSmall()),
                           Text(
                             '₹${item['sellPrice'] ?? 0.0}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               color: _accentGreen,

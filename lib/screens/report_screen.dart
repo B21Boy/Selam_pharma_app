@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import '../widgets/custom_bottom_nav_bar.dart';
 import '../screens/register_medicine_dialog.dart';
 import 'chat_screen.dart';
@@ -10,6 +11,15 @@ import 'package:intl/intl.dart';
 import '../providers/pharmacy_provider.dart';
 import '../models/report.dart';
 import '../models/medicine.dart';
+
+// helper used by bottom nav callbacks to push without animation
+PageRouteBuilder<T> _noAnimRoute<T>(Widget page) {
+  return PageRouteBuilder(
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionDuration: Duration.zero,
+    reverseTransitionDuration: Duration.zero,
+  );
+}
 
 class ReportScreen extends StatefulWidget {
   const ReportScreen({super.key});
@@ -482,10 +492,9 @@ class ReportScreenState extends State<ReportScreen> {
         selectedIndex: _selectedNavIndex,
         onSelect: (i) => setState(() => _selectedNavIndex = i),
         onHome: () {
-          Navigator.pushReplacement(
+          Navigator.of(
             context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
+          ).pushReplacement(_noAnimRoute(const HomeScreen()));
         },
         onRegister: () {
           showModalBottomSheet<String>(
@@ -499,19 +508,13 @@ class ReportScreenState extends State<ReportScreen> {
           });
         },
         onChat: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ChatScreen()),
-          );
+          Navigator.of(context).push(_noAnimRoute(const ChatScreen()));
         },
         onReports: () {
           // Already on reports; maybe refresh
         },
         onAudit: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AuditScreen()),
-          );
+          Navigator.of(context).push(_noAnimRoute(const AuditScreen()));
         },
       ),
     );

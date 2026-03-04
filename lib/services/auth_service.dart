@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
 
 // local offline-auth helpers
 import 'local_auth.dart';
@@ -19,14 +20,25 @@ class AccountExistsWithDifferentCredential implements Exception {
   String toString() => 'AccountExistsWithDifferentCredential: $email $message';
 }
 
+// default value copied from `remote-config-template.json` so the app
+// works out-of-the-box without any additional setup.  This is the same
+// Web client ID used by the Firebase project backing this repository.
+const _kDefaultGoogleServerClientId =
+    '336526161177-o7q6340g3dhv6qa59hrbad04uh5h3mod.apps.googleusercontent.com';
+
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   AuthCredential? _pendingCredential;
 
   // Read Google Web client ID from environment for safer configuration.
   // Priority: .env (flutter_dotenv) -> --dart-define(GOOGLE_SERVER_CLIENT_ID)
+  //          -> Firebase Remote Config (key: google_server_client_id)
+  //          -> built-in default value above.
   // Example .env entry: GOOGLE_SERVER_CLIENT_ID=12345-abcde.apps.googleusercontent.com
-  String _resolveGoogleServerClientId() {
+  // Remote config key can be added via the Firebase console for cases where you
+  // want to change the value without rebuilding the app.
+  Future<String> _resolveGoogleServerClientId() async {
+    // 1. dotenv file
     String? fromDotenv;
     try {
       fromDotenv = dotenv.env['GOOGLE_SERVER_CLIENT_ID'];
@@ -34,9 +46,28 @@ class AuthService {
       fromDotenv = null;
     }
     if (fromDotenv != null && fromDotenv.isNotEmpty) return fromDotenv;
+
+    // 2. compile-time define
     final fromDefine = const String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
     if (fromDefine.isNotEmpty) return fromDefine;
-    return '';
+
+    // 3. remote config
+    try {
+      final rc = FirebaseRemoteConfig.instance;
+      await rc.fetchAndActivate();
+      final rcVal = rc.getString('google_server_client_id');
+      if (rcVal.isNotEmpty) return rcVal;
+    } catch (_) {
+      // ignore errors and fall through
+    }
+
+    // 4. fallback to built-in default so sign-in works with the project's
+    // configured client id without requiring any developer setup.
+    debugPrint(
+      'Using embedded default Google Web client ID. To override, set '
+      'GOOGLE_SERVER_CLIENT_ID via .env, dart-define or remote config.',
+    );
+    return _kDefaultGoogleServerClientId;
   }
 
   Stream<User?> authStateChanges() => _auth.authStateChanges();
@@ -131,7 +162,7 @@ class AuthService {
   }
 
   Future<UserCredential?> signInWithGoogle() async {
-    final serverClientId = _resolveGoogleServerClientId();
+    final serverClientId = await _resolveGoogleServerClientId();
     if (serverClientId.isEmpty) {
       throw Exception(
         'Google Sign-In not configured: set GOOGLE_SERVER_CLIENT_ID in .env, Remote Config (key: google_server_client_id), or pass --dart-define=GOOGLE_SERVER_CLIENT_ID=<id>. See GOOGLE_SIGNIN.md.',

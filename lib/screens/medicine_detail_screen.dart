@@ -146,7 +146,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
             child: Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final newQty =
                   int.tryParse(_restockQtyController.text) ??
                   _currentMedicine.totalQty;
@@ -167,11 +167,30 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
 
               _calculateAnalytics();
 
+              final messenger = ScaffoldMessenger.of(context);
+              final navigator = Navigator.of(context);
               final provider = context.read<PharmacyProvider>();
-              provider.updateMedicine(_currentMedicine);
+              await provider.updateMedicine(_currentMedicine);
 
-              Navigator.of(context).pop();
-              showAppSnackBar(context, 'Medicine restocked successfully');
+              // Clear historical reports for this medicine so analytics start at 0
+              // after a restock (user requested Total Revenue and Real Profit
+              // to reset to zero on restock).
+              try {
+                await provider.removeReportsForMedicine(_currentMedicine.name);
+              } catch (_) {}
+
+              // Reload reports and refresh analytics/UI immediately.
+              setState(() {
+                _loadMedicineReports();
+                _calculateAnalytics();
+              });
+
+              navigator.pop();
+              messenger.showSnackBar(
+                const SnackBar(
+                  content: Text('Medicine restocked successfully'),
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -277,7 +296,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
             child: Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final newName = nameController.text.trim();
               final newQty =
                   int.tryParse(_restockQtyController.text) ??
@@ -303,14 +322,17 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
 
               _calculateAnalytics();
 
+              final messenger = ScaffoldMessenger.of(context);
+              final navigator = Navigator.of(context);
               final provider = context.read<PharmacyProvider>();
-              provider.updateMedicine(_currentMedicine).then((_) {
-                // Reload reports with the new medicine name
-                _loadMedicineReports();
-              });
+              await provider.updateMedicine(_currentMedicine);
+              // Reload reports with the new medicine name
+              _loadMedicineReports();
 
-              Navigator.of(context).pop();
-              showAppSnackBar(context, 'Medicine updated successfully');
+              navigator.pop();
+              messenger.showSnackBar(
+                const SnackBar(content: Text('Medicine updated successfully')),
+              );
             },
             style: ElevatedButton.styleFrom(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -625,9 +647,12 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
     final textColor = theme.colorScheme.onSurface;
     final hintColor = theme.hintColor;
 
-    final int profit =
-        _currentMedicine.soldQty * _currentMedicine.sellPrice -
-        _currentMedicine.totalQty * _currentMedicine.buyPrice;
+    final double realProfit =
+        _medicineReports.fold<double>(
+          0,
+          (sum, report) => sum + report.totalGain,
+        ) -
+        (_currentMedicine.soldQty * _currentMedicine.buyPrice);
 
     return Scaffold(
       appBar: AppBar(
@@ -679,7 +704,7 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
                     Text(
                       'Medicine: ${_currentMedicine.name}\n'
                       'Total Sold: ${_currentMedicine.soldQty}\n'
-                      'Profit: $profit Birr',
+                      'Profit: ${realProfit.toStringAsFixed(0)} Birr',
                       style: GoogleFonts.montserrat(
                         fontSize: 14,
                         color: theme.colorScheme.onErrorContainer,
@@ -791,18 +816,18 @@ class MedicineDetailScreenState extends State<MedicineDetailScreen> {
                                     ),
                                     decoration: BoxDecoration(
                                       color:
-                                          (profit >= 0
+                                          (realProfit >= 0
                                                   ? Colors.green
                                                   : Colors.red)
                                               .withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
-                                      'Profit: $profit Birr',
+                                      'Profit: ${realProfit.toStringAsFixed(0)} Birr',
                                       style: GoogleFonts.montserrat(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w700,
-                                        color: profit >= 0
+                                        color: realProfit >= 0
                                             ? Colors.green[700]
                                             : Colors.red[700],
                                       ),

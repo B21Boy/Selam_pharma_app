@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 // No external providers required for static help content
+import 'contact_screen.dart';
 
 class HelpScreen extends StatelessWidget {
   const HelpScreen({super.key});
@@ -185,7 +186,9 @@ class HelpScreen extends StatelessWidget {
               ElevatedButton.icon(
                 icon: const Icon(Icons.contact_page_outlined),
                 label: const Text('Contact Support'),
-                onPressed: () => Navigator.of(context).pushNamed('/contact'),
+                // push using named route constant instead of hardcoded string
+                onPressed: () =>
+                    Navigator.of(context).pushNamed(ContactScreen.routeName),
               ),
 
               const SizedBox(height: 24),

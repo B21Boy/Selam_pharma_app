@@ -14,20 +14,27 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/splash_screen.dart';
+import 'screens/contact_screen.dart';
 import 'services/auth_service.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
-import 'utils/ui_helpers.dart';
+// utils/ui_helpers replaced by direct ScaffoldMessenger usage in async handlers
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
   WidgetsFlutterBinding.ensureInitialized();
   try {
     await dotenv.load(fileName: ".env");
   } catch (e) {
     debugPrint('Warning: Could not load .env: $e');
   }
-  await Firebase.initializeApp();
+  try {
+    await Firebase.initializeApp();
+  } catch (e) {
+    // On some desktop platforms firebase_core isn't supported, so we
+    // swallow initialization errors. Runtime features will check for
+    // FirebaseAuth.instance etc before use.
+    debugPrint('Firebase.initializeApp failed: $e');
+  }
   await Hive.initFlutter();
   Hive.registerAdapter(MedicineAdapter());
   Hive.registerAdapter(ReportAdapter());
@@ -111,6 +118,8 @@ class MyApp extends StatelessWidget {
               '/login': (_) => LoginScreen(),
               '/register': (_) => RegisterScreen(),
               '/forgot': (_) => ForgotPasswordScreen(),
+              // make contact screen available for named navigation
+              ContactScreen.routeName: (_) => const ContactScreen(),
             },
             builder: (context, child) {
               final sync = Provider.of<SyncService?>(context);
@@ -143,6 +152,7 @@ class MyApp extends StatelessWidget {
                             TextButton(
                               onPressed: () async {
                                 final navigator = Navigator.of(context);
+                                final messenger = ScaffoldMessenger.of(context);
                                 try {
                                   await AuthService().signOut();
                                   navigator.pushNamedAndRemoveUntil(
@@ -150,10 +160,11 @@ class MyApp extends StatelessWidget {
                                     (route) => false,
                                   );
                                 } catch (e) {
-                                  showAppSnackBar(
-                                    context,
-                                    'Sign out failed: $e',
-                                    error: true,
+                                  messenger.showSnackBar(
+                                    SnackBar(
+                                      content: Text('Sign out failed: $e'),
+                                      backgroundColor: Colors.red.shade700,
+                                    ),
                                   );
                                 }
                               },

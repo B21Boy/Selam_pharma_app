@@ -312,6 +312,19 @@ class PharmacyProvider extends ChangeNotifier {
     await loadData();
   }
 
+  /// Remove all reports associated with [medicineName].
+  Future<void> removeReportsForMedicine(String medicineName) async {
+    final toRemove = _reports
+        .where((r) => r.medicineName == medicineName)
+        .toList();
+    for (final r in toRemove) {
+      try {
+        await r.delete();
+      } catch (_) {}
+    }
+    await loadData();
+  }
+
   Future<void> _openBoxesForUid(String? uid) async {
     final medsName = uid == null ? 'medicines_guest' : 'medicines_$uid';
     final reportsName = uid == null ? 'reports_guest' : 'reports_$uid';

@@ -19,7 +19,12 @@ if (keystorePropertiesFile.exists()) {
 
 android {
     namespace = "com.deksi.pharmacy"
-    compileSdk = flutter.compileSdkVersion
+    // flutter.compileSdkVersion sometimes lags behind the newest Android APIs.
+    // The build failure (android:attr/lStar not found) required bumping the
+    // compileSdk.  Several plugins in the project (e.g. google_sign_in_android,
+    // image_picker_android) need SDK 36 or higher.  Use the highest SDK the
+    // installed Android SDK supports (36 at time of writing).
+    compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
@@ -39,7 +44,7 @@ android {
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
+        targetSdk = 36 // target the same or higher than compileSdk
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

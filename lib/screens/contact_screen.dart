@@ -83,16 +83,15 @@ class _ContactScreenState extends State<ContactScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
+                final messenger = ScaffoldMessenger.of(context);
                 Navigator.of(context).pop();
                 final email = 'mailto:deksiman721@gmail.com';
                 if (await canLaunchUrlString(email)) {
                   await launchUrlString(email);
                 } else {
                   if (mounted) {
-                    showAppSnackBar(
-                      context,
-                      'Unable to open email app',
-                      error: true,
+                    messenger.showSnackBar(
+                      const SnackBar(content: Text('Unable to open email app')),
                     );
                   }
                 }

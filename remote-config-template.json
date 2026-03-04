@@ -3,6 +3,14 @@
     "google_server_client_id": {
       "defaultValue": { "value": "336526161177-o7q6340g3dhv6qa59hrbad04uh5h3mod.apps.googleusercontent.com" },
       "description": "Web client ID used by Android/Google Sign-In (serverClientId)"
+    },
+    "google_android_client_id": {
+      "defaultValue": { "value": "336526161177-fhjclo5oearsg2vppt1gqf3iulbr8oep.apps.googleusercontent.com" },
+      "description": "Android OAuth client (for info only; not used by code)"
+    },
+    "google_ios_client_id": {
+      "defaultValue": { "value": "336526161177-4oflh2tc03ujrlr28j8g5rpsvq5rgttn.apps.googleusercontent.com" },
+      "description": "iOS OAuth client (for info only; not used by code)"
     }
   }
 }

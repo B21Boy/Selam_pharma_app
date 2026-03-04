@@ -1,10 +1,13 @@
-// Temporary: ignore new RadioGroup deprecations and context sync lint here.
-// TODO: migrate RadioListTile usage to RadioGroup when updating Flutter SDK.
-// ignore_for_file: deprecated_member_use, use_build_context_synchronously
+// Appearance selection uses RadioGroup (introduced in Flutter 3.32+).
+// Removing deprecated parameter warnings by using the new API directly.
+// ignore_for_file: use_build_context_synchronously
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
+import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
 import '../services/local_auth.dart';
 import '../services/notification_service.dart';
@@ -27,6 +30,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _trashNotificationsEnabled = true;
 
   Box? _settingsBox;
+
+  /// Export all available reports to a CSV file in application documents.
+  Future<void> _exportAllData() async {
+    try {
+      final prov = Provider.of<PharmacyProvider>(context, listen: false);
+      final reports = prov.reports;
+      final directory = await getApplicationDocumentsDirectory();
+      final fileName =
+          'export_all_${DateTime.now().toIso8601String().replaceAll(':', '-')}.csv';
+      final file = File('${directory.path}/$fileName');
+
+      final csv = StringBuffer();
+      csv.writeln('Date,Medicine,Quantity,Total Gain');
+      for (final r in reports) {
+        csv.writeln(
+          '${DateFormat('yyyy-MM-dd HH:mm').format(r.dateTime)},${r.medicineName},${r.soldQty},${r.totalGain}',
+        );
+      }
+      await file.writeAsString(csv.toString());
+      if (mounted) {
+        showAppSnackBar(context, 'Data exported to ${file.path}');
+      }
+    } catch (e) {
+      if (mounted) {
+        showAppSnackBar(context, 'Export failed: $e', error: true);
+      }
+    }
+  }
 
   @override
   void initState() {
@@ -82,27 +113,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       final groupValue = themeProvider.isDarkMode
                           ? 'dark'
                           : 'light';
-                      return Column(
-                        children: [
-                          RadioListTile<String>(
-                            value: 'light',
-                            groupValue: groupValue,
-                            title: Text('Light', style: titleStyle),
-                            onChanged: (v) {
-                              if (v == null) return;
-                              context.read<ThemeProvider>().setDark(false);
-                            },
-                          ),
-                          RadioListTile<String>(
-                            value: 'dark',
-                            groupValue: groupValue,
-                            title: Text('Dark', style: titleStyle),
-                            onChanged: (v) {
-                              if (v == null) return;
-                              context.read<ThemeProvider>().setDark(true);
-                            },
-                          ),
-                        ],
+                      return RadioGroup<String>(
+                        groupValue: groupValue,
+                        onChanged: (v) {
+                          if (v == null) return;
+                          context.read<ThemeProvider>().setDark(v == 'dark');
+                        },
+                        child: Column(
+                          children: [
+                            RadioListTile<String>(
+                              value: 'light',
+                              title: Text('Light', style: titleStyle),
+                            ),
+                            RadioListTile<String>(
+                              value: 'dark',
+                              title: Text('Dark', style: titleStyle),
+                            ),
+                          ],
+                        ),
                       );
                     },
                   ),
@@ -249,9 +277,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     leading: const Icon(Icons.file_download_outlined),
                     title: Text('Export data', style: titleStyle),
                     subtitle: Text('Export CSV / JSON', style: subtitleStyle),
-                    onTap: () {
-                      // TODO: implement export
-                      showAppSnackBar(context, 'Export started');
+                    onTap: () async {
+                      await _exportAllData();
                     },
                   ),
                   ListTile(
@@ -325,6 +352,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         showAppSnackBar(
                           context,
                           'Sign out failed: $e',
+                          error: true,
+                        );
+                      }
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.login),
+                    title: Text('Sign in with Google (debug)', style: titleStyle),
+                    subtitle: Text('Trigger Google Sign-In for testing', style: subtitleStyle),
+                    onTap: () async {
+                      try {
+                        final cred = await AuthService().signInWithGoogle();
+                        if (!mounted) return;
+                        final user = cred?.user;
+                        showAppSnackBar(
+                          context,
+                          user != null
+                              ? 'Signed in: ${user.email ?? user.uid}'
+                              : 'Signed in',
+                        );
+                        Navigator.of(context).pushNamedAndRemoveUntil('/home', (r) => false);
+                      } catch (e) {
+                        if (!mounted) return;
+                        showAppSnackBar(
+                          context,
+                          'Google Sign-In failed: ${e.toString()}',
                           error: true,
                         );
                       }

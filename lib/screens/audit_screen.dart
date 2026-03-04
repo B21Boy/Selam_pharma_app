@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -14,6 +15,15 @@ import 'chat_screen.dart';
 import 'report_screen.dart';
 import 'home_screen.dart';
 import '../utils/ui_helpers.dart';
+
+// route builder that suppresses all transitions
+PageRouteBuilder<T> _noAnimRoute<T>(Widget page) {
+  return PageRouteBuilder(
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionDuration: Duration.zero,
+    reverseTransitionDuration: Duration.zero,
+  );
+}
 
 class AuditScreen extends StatefulWidget {
   const AuditScreen({super.key});
@@ -653,10 +663,9 @@ class _AuditScreenState extends State<AuditScreen> {
         selectedIndex: _selectedNavIndex,
         onSelect: (i) => setState(() => _selectedNavIndex = i),
         onHome: () {
-          Navigator.pushReplacement(
+          Navigator.of(
             context,
-            MaterialPageRoute(builder: (context) => const HomeScreen()),
-          );
+          ).pushReplacement(_noAnimRoute(const HomeScreen()));
         },
         onRegister: () {
           showModalBottomSheet<String>(
@@ -666,16 +675,10 @@ class _AuditScreenState extends State<AuditScreen> {
           );
         },
         onChat: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ChatScreen()),
-          );
+          Navigator.of(context).push(_noAnimRoute(const ChatScreen()));
         },
         onReports: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const ReportScreen()),
-          );
+          Navigator.of(context).push(_noAnimRoute(const ReportScreen()));
         },
         onAudit: () {},
       ),

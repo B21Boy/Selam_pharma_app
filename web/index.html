@@ -134,17 +134,20 @@
       />
     </picture>
 
+    <script src="env.js"></script>
     <script type="module">
       import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
       import { getAuth } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js";
 
+      // firebase config is provided at runtime by web/env.js generated from
+      // environment variables or a .env file via the script `scripts/generate_env_js.sh`.
       const firebaseConfig = {
-        apiKey: "AIzaSyBs2WKXgbNeNvv_6JoatYOTsiz6zWl-Y5Y",
-        authDomain: "pharmacy-app-8fab8.firebaseapp.com",
-        projectId: "pharmacy-app-8fab8",
-        storageBucket: "pharmacy-app-8fab8.firebasestorage.app",
-        messagingSenderId: "336526161177",
-        appId: "1:336526161177:web:5adbc2f3d410827c5cc188",
+        apiKey: window._env_?.FIREBASE_API_KEY || "REPLACE_WITH_FIREBASE_API_KEY",
+        authDomain: window._env_?.FIREBASE_AUTH_DOMAIN || "pharmacy-app-8fab8.firebaseapp.com",
+        projectId: window._env_?.FIREBASE_PROJECT_ID || "pharmacy-app-8fab8",
+        storageBucket: window._env_?.FIREBASE_STORAGE_BUCKET || "pharmacy-app-8fab8.firebasestorage.app",
+        messagingSenderId: window._env_?.FIREBASE_MESSAGING_SENDER_ID || "336526161177",
+        appId: window._env_?.FIREBASE_APP_ID || "1:336526161177:web:5adbc2f3d410827c5cc188",
       };
 
       const app = initializeApp(firebaseConfig);

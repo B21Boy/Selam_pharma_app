@@ -60,6 +60,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
     setState(() => _loading = true);
     try {
       debugPrint('Attempting to create user: ${_emailCtrl.text.trim()}');
@@ -112,10 +114,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
         debugPrint('Sign-out after register failed: $signOutErr');
       }
 
-      if (mounted) {
-        showAppSnackBar(context, 'Account created. Please sign in.');
-        Navigator.pop(context, _emailCtrl.text.trim());
-      }
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Account created. Please sign in.')),
+      );
+      navigator.pop(_emailCtrl.text.trim());
     } catch (e, st) {
       final errText = e.toString();
       final isPigeonTypeError =
@@ -145,12 +147,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
           try {
             await _auth.signOut();
           } catch (_) {}
-          if (mounted) {
-            showAppSnackBar(context, 'Account created. Please sign in.');
-            Navigator.pop(context, email);
-            setState(() => _loading = false);
-            return;
-          }
+          messenger.showSnackBar(
+            const SnackBar(content: Text('Account created. Please sign in.')),
+          );
+          navigator.pop(email);
+          setState(() => _loading = false);
+          return;
         }
 
         // 2) Try signing in with the credentials used to register.
@@ -166,12 +168,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             try {
               await _auth.signOut();
             } catch (_) {}
-            if (mounted) {
-              showAppSnackBar(context, 'Account created. Please sign in.');
-              Navigator.pop(context, email);
-              setState(() => _loading = false);
-              return;
-            }
+            messenger.showSnackBar(
+              const SnackBar(content: Text('Account created. Please sign in.')),
+            );
+            navigator.pop(email);
+            setState(() => _loading = false);
+            return;
           }
         } catch (signInErr) {
           debugPrint('Sign-in attempt after register failed: $signInErr');
@@ -234,6 +236,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       }
     } catch (e) {
       if (e is AccountExistsWithDifferentCredential) {
+        if (!mounted) return;
         showDialog<void>(
           context: context,
           builder: (_) => AlertDialog(
@@ -250,7 +253,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         );
       } else {
-        _showError(e);
+        final msg = e.toString();
+        if (msg.contains('Google Sign-In not configured')) {
+          _displayError(
+            'Google Sign-In is not configured. '
+            'Please see the project README/GOOGLE_SIGNIN.md for setup instructions.',
+          );
+        } else {
+          _showError(e);
+        }
       }
     } finally {
       setState(() => _loading = false);
@@ -261,6 +272,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+
+    // reuse decoration logic from login_screen for consistent sizing
+    InputDecoration inputDecoration({
+      required String hint,
+      String? errorText,
+      Widget? suffixIcon,
+    }) {
+      return InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(fontSize: 14),
+        errorText: errorText,
+        errorStyle: const TextStyle(color: Colors.red, fontSize: 12),
+        isDense: true,
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 16,
+          horizontal: 14,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: cs.onSurface.withAlpha((0.06 * 255).round()),
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: cs.onSurface.withAlpha((0.06 * 255).round()),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: cs.primary),
+        ),
+        suffixIcon: suffixIcon,
+      );
+    }
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -347,20 +394,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           // Username (store into Firestore profile on register)
                           TextFormField(
                             controller: _usernameCtrl,
-                            decoration: const InputDecoration(
-                              hintText: 'Username',
-                              hintStyle: TextStyle(fontSize: 12),
-                              isDense: true,
-                              contentPadding: EdgeInsets.symmetric(
-                                vertical: 8,
-                                horizontal: 12,
-                              ),
-                              errorStyle: TextStyle(
-                                color: Colors.red,
-                                fontSize: 12,
-                              ),
-                            ),
-                            style: const TextStyle(fontSize: 12),
+                            decoration: inputDecoration(hint: 'Username'),
+                            style: const TextStyle(fontSize: 14),
                             textCapitalization: TextCapitalization.words,
                             validator: (v) {
                               if (v == null || v.trim().isEmpty) {
@@ -377,20 +412,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                           TextFormField(
                             controller: _emailCtrl,
-                            decoration: const InputDecoration(
-                              hintText: 'Email',
-                              hintStyle: TextStyle(fontSize: 12),
-                              isDense: true,
-                              contentPadding: EdgeInsets.symmetric(
-                                vertical: 8,
-                                horizontal: 12,
-                              ),
-                              errorStyle: TextStyle(
-                                color: Colors.red,
-                                fontSize: 12,
-                              ),
-                            ),
-                            style: const TextStyle(fontSize: 12),
+                            decoration: inputDecoration(hint: 'Email'),
+                            style: const TextStyle(fontSize: 14),
                             keyboardType: TextInputType.emailAddress,
                             validator: (v) {
                               if (v == null || v.trim().isEmpty) {
@@ -409,18 +432,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                           TextFormField(
                             controller: _passCtrl,
-                            decoration: InputDecoration(
-                              hintText: 'Password',
-                              hintStyle: TextStyle(fontSize: 12),
-                              isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 8,
-                                horizontal: 12,
-                              ),
-                              errorStyle: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 12,
-                              ),
+                            decoration: inputDecoration(
+                              hint: 'Password',
                               suffixIcon: AnimatedRotation(
                                 turns: _obscurePass ? 0.0 : 0.5,
                                 duration: const Duration(milliseconds: 220),
@@ -433,10 +446,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     _obscurePass
                                         ? Icons.visibility_off
                                         : Icons.visibility,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.65),
+                                    color: cs.onSurface.withAlpha(
+                                      (0.65 * 255).round(),
+                                    ),
                                   ),
                                   onPressed: () => setState(
                                     () => _obscurePass = !_obscurePass,
@@ -444,7 +456,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               ),
                             ),
-                            style: const TextStyle(fontSize: 12),
+                            style: const TextStyle(fontSize: 14),
                             obscureText: _obscurePass,
                             validator: (v) {
                               if (v == null || v.isEmpty) {
@@ -465,21 +477,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                           TextFormField(
                             controller: _confirmCtrl,
-                            decoration: InputDecoration(
-                              hintText: 'Confirm Password',
-                              hintStyle: TextStyle(fontSize: 12),
-                              isDense: true,
-                              contentPadding: EdgeInsets.symmetric(
-                                vertical: 8,
-                                horizontal: 12,
-                              ),
-                              errorStyle: const TextStyle(
-                                color: Colors.red,
-                                fontSize: 12,
-                              ),
+                            decoration: inputDecoration(
+                              hint: 'Confirm Password',
                               suffixIcon: AnimatedRotation(
                                 turns: _obscureConfirm ? 0.0 : 0.5,
-                                duration: Duration(milliseconds: 220),
+                                duration: const Duration(milliseconds: 220),
                                 curve: Curves.easeInOut,
                                 child: IconButton(
                                   tooltip: _obscureConfirm
@@ -489,10 +491,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     _obscureConfirm
                                         ? Icons.visibility_off
                                         : Icons.visibility,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurface
-                                        .withValues(alpha: 0.65),
+                                    color: cs.onSurface.withAlpha(
+                                      (0.65 * 255).round(),
+                                    ),
                                   ),
                                   onPressed: () => setState(
                                     () => _obscureConfirm = !_obscureConfirm,
@@ -500,7 +501,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               ),
                             ),
-                            style: const TextStyle(fontSize: 12),
+                            style: const TextStyle(fontSize: 14),
                             obscureText: _obscureConfirm,
                             validator: (v) {
                               if (v == null || v.isEmpty) {
