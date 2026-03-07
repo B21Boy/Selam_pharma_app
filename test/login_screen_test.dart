@@ -5,7 +5,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:shmed/screens/login_screen.dart';
 
+// ensure the Flutter testing environment is initialized before doing
+// any platform-channel work (Hive, local_auth, etc.)
+// calling this once at the top of main mirrors what flutter_test does
+// automatically for other tests.
+
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   Directory? tempDir;
 
   setUpAll(() async {
@@ -43,8 +49,11 @@ void main() {
     final settings = await Hive.openBox('settings');
     await settings.put('biometric_enabled', true);
 
+    // build the login screen and allow any pending async work to complete.
     await tester.pumpWidget(MaterialApp(home: LoginScreen()));
-    await tester.pumpAndSettle();
+    // allow asynchronous initialization to run, but keep it lightweight
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.byIcon(Icons.fingerprint), findsNothing);
   });
@@ -58,7 +67,8 @@ void main() {
     await accounts.put('foo@example.com', {'email': 'foo@example.com'});
 
     await tester.pumpWidget(MaterialApp(home: LoginScreen()));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
     expect(find.byIcon(Icons.fingerprint), findsOneWidget);
   });

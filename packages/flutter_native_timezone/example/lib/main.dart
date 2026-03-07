@@ -9,7 +9,7 @@ class MyApp extends StatefulWidget {
   const MyApp({Key? key}) : super(key: key);
 
   @override
-  _MyAppState createState() => _MyAppState();
+  State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
@@ -26,13 +26,14 @@ class _MyAppState extends State<MyApp> {
     try {
       _timezone = await FlutterNativeTimezone.getLocalTimezone();
     } catch (e) {
-      print('Could not get the local timezone');
+      // avoid using print in production; emulator or debug builds only
+      debugPrint('Could not get the local timezone: $e');
     }
     try {
       _availableTimezones = await FlutterNativeTimezone.getAvailableTimezones();
       _availableTimezones.sort();
     } catch (e) {
-      print('Could not get available timezones');
+      debugPrint('Could not get available timezones');
     }
     if (mounted) {
       setState(() {});

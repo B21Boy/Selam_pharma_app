@@ -1,8 +1,8 @@
 import 'dart:async';
+import 'dart:js_interop';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_web_plugins/flutter_web_plugins.dart';
-import 'package:js/js.dart';
 
 ///
 /// The plugin class for the web, acts as the plugin inside bits
@@ -10,8 +10,10 @@ import 'package:js/js.dart';
 ///
 class FlutterNativeTimezonePlugin {
   static void registerWith(Registrar registrar) {
-    final MethodChannel channel = MethodChannel('flutter_native_timezone',
-        const StandardMethodCodec(), registrar.messenger);
+    final MethodChannel channel = MethodChannel(
+      'flutter_native_timezone',
+      const StandardMethodCodec(),
+    );
     final FlutterNativeTimezonePlugin instance = FlutterNativeTimezonePlugin();
     channel.setMethodCallHandler(instance.handleMethodCall);
   }
@@ -40,16 +42,16 @@ class FlutterNativeTimezonePlugin {
 }
 
 @JS('Intl.DateTimeFormat')
-external _JSDateTimeFormat jsDateTimeFormat();
+external JSDateTimeFormat jsDateTimeFormat();
 
 @JS()
-abstract class _JSDateTimeFormat {
-  @JS()
-  external _JSResolvedOptions resolvedOptions();
+@anonymous
+class JSDateTimeFormat {
+  external JSResolvedOptions resolvedOptions();
 }
 
 @JS()
-abstract class _JSResolvedOptions {
-  @JS()
+@anonymous
+class JSResolvedOptions {
   external String get timeZone;
 }

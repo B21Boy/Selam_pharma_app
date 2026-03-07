@@ -305,7 +305,8 @@ class HomeScreenState extends State<HomeScreen> {
                       final crossAxisCount = width > 600 ? 4 : 2;
                       return GridView.builder(
                         padding: const EdgeInsets.all(16.0),
-                        cacheExtent: 1000, // preload items for smoother scrolling
+                        cacheExtent:
+                            1000, // preload items for smoother scrolling
                         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: crossAxisCount,
                           crossAxisSpacing: 16.0,
